@@ -162,5 +162,3 @@ if __name__ == "__main__":
     print(stats_tout.round(3).to_string())
 
     c_tout.sauvegarder("matchs_consolides.pkl")       #sauvegarde des données consolidées en pickle
-
-    #
