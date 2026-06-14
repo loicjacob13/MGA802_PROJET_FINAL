@@ -66,8 +66,8 @@ def test_nettoyer_colonnes():
     chemin = creer_csv_temporaire()
     c = ChargeurDonnees(chemin)
     c.nettoyer()
-    attendues = {'Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG'}
-    assert set(c.donnees.columns) == attendues  #seules les 5 colonnes utiles doivent rester
+    attendues = {'Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'journee'}
+    assert set(c.donnees.columns) == attendues  #seules les colonnes utiles doivent rester
     os.unlink(chemin)
 
 def test_nettoyer_dates():
