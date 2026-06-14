@@ -20,7 +20,9 @@ class ModelePoisson:
         self.params=np.zeros(2*n_equipes+1) #dernier paramètre sera le facteur de l'avantage de l'équipe
         #le vecteur params consiste à appliquer une donnée force d'attaque et une donnée force défense et 1 avnatage domicile qui sera commun à tous
         #ici, il y a 3 équipes didérentes donc le vecteur params prendra juste 7 termes car le facteur de jouer à domicile est jugé uniforme à tous
-
+        self.noms_equipes = None
+        self.index_equipes = None
+        self.matchs = None
 
 # mtn il faut créer une fonction qui va lire la grille de Fabien et savoir l'utiliser pour pouvoir créer un autre vecteur params
 
@@ -60,7 +62,7 @@ class ModelePoisson:
         attaques=params[:n]
         defenses=params[n:2*n]
         avantage=params[2*n] #dernier nombre caractérise l'avanatge domicile
-
+        return attaques, defenses, avantage
 
     #foncction qui calcule les buts attendus
 
@@ -168,5 +170,13 @@ class ModelePoisson:
         """
         _, _, avantage = self._deplier(self.params) #les 2 premiers termes ne nous interesent pas d'où le _
         return float(avantage)
+    def get_index_equipes(self):
+        return self.index_equipes
+
+    def sauvegarder(self, chemin_pickle):
+        """Sauvegarde les forces apprises au format pickle."""
+        donnees = {"params": self.params, "n_equipes": self.n_equipes,
+                   "noms_equipes": self.noms_equipes, "index_equipes": self.index_equipes}
+        pd.to_pickle(donnees, chemin_pickle)
 
 
