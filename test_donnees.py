@@ -159,7 +159,7 @@ def test_statistiques_equipes():
 
 def test_sauvegarder():
     c = creer_chargeur()
-    chemin_pickle = tempfile.mktemp(suffix='.pkl')  #chemin temporaire pour le fichier pickle
+    chemin_pickle = tempfile.mktemp(suffix='.pkl')  #chemin temporaire pour notre fichier pickle
     try:
         c.sauvegarder(chemin_pickle)
         assert os.path.exists(chemin_pickle)   #le fichier doit exister sur le disque
