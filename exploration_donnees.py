@@ -36,12 +36,8 @@ def construire_grille(chargeur):
     grille.index.name = "Exterieur"
 
     matchs_numpy = chargeur.get_matchs()      #on récupère le tableau NumPy : [idx_dom, idx_ext, buts_dom, buts_ext]
-
     df = chargeur.donnees.sort_values('Date').reset_index(drop=True)  #besoin des dates pour calculer les journées, on va trier le DataFrame interne par date pour numéroter les journées
-    df['journee'] = df.index // 10 + 1   #numéro de journée, on a 10 matchs par journée en Premier League
-
     noms = {v: k for k, v in index_eq.items()}     #dictionnaire inverse {numéro: nom} pour retrouver les noms depuis les index NumPy
-
 
     for i, ligne in df.iterrows():   #on parcourt chaque match du DataFrame trié
         dom = ligne['HomeTeam'] #nom de l'équipe à domicile

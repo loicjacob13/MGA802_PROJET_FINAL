@@ -71,7 +71,8 @@ class ChargeurDonnees:   #création de la classe
         self.donnees = self.donnees.reset_index(drop=True)     #on reajuste les numéros de lignes après la suppression
         self.donnees['FTHG'] = self.donnees['FTHG'].astype(int) #on fait lire les clonnes de buts en int et pas float
         self.donnees['FTAG'] = self.donnees['FTAG'].astype(int)
-
+        self.donnees = self.donnees.sort_values('Date').reset_index(drop=True)  # on trie par date pour avoir les matchs dans l'ordre chronologique
+        self.donnees['journee'] = self.donnees.index + 1  # numéro de match dans l'ordre chronologique, de 1 à 380
         print(f"Données nettoyées : {len(self.donnees)} matchs conservés.")
 
     def get_equipes(self):
