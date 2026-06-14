@@ -1,6 +1,7 @@
 """donnees.py — Ce fichier permet de charger et nettoyage des données de Premier League
 Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
 """
+
 import pandas as pd
 import numpy as np
 
