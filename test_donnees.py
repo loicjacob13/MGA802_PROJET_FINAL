@@ -66,8 +66,8 @@ def test_nettoyer_colonnes():
     chemin = creer_csv_temporaire()
     c = ChargeurDonnees(chemin)
     c.nettoyer()
-    attendues = {'Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG'}
-    assert set(c.donnees.columns) == attendues  #seules les 5 colonnes utiles doivent rester
+    attendues = {'Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'journee'}
+    assert set(c.donnees.columns) == attendues  #seules les colonnes utiles doivent rester
     os.unlink(chemin)
 
 def test_nettoyer_dates():
@@ -159,7 +159,7 @@ def test_statistiques_equipes():
 
 def test_sauvegarder():
     c = creer_chargeur()
-    chemin_pickle = tempfile.mktemp(suffix='.pkl')  #chemin temporaire pour le fichier pickle
+    chemin_pickle = tempfile.mktemp(suffix='.pkl')  #chemin temporaire pour notre fichier pickle
     try:
         c.sauvegarder(chemin_pickle)
         assert os.path.exists(chemin_pickle)   #le fichier doit exister sur le disque
