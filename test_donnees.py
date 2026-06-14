@@ -1,6 +1,7 @@
-# test_donnees.py est unb fichier de tests unitaires pour la classe ChargeurDonnees
-# Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
-# Ce fichier est à lancer depuis la racine du projet : python -m pytest test_donnees.py -v
+"""test_donnees.py est unb fichier de tests unitaires pour la classe ChargeurDonnees
+Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
+Ce fichier est à lancer depuis la racine du projet : python -m pytest test_donnees.py -v
+"""
 
 import pytest
 import numpy as np

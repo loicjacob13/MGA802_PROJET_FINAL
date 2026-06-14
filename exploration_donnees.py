@@ -1,8 +1,10 @@
-# exploration_donnees.py est le fichier pour l'exploration dans la base de données complète de la Premier League
-# Auteurs : Fabien — Loïc - Guillaume - Projet MGA802 Groupe 2
-# Ce script produit ne grille MultiIndex par saison (visualisation de tous les matchs)
-# ainsi que les statistiques consolidées par équipe et un résumé des tableaux NumPy
-# que get_matchs() fournit au modèle
+"""exploration_donnees.py est le fichier pour l'exploration dans la base de données complète de la Premier League
+Auteurs : Fabien — Loïc - Guillaume - Projet MGA802 Groupe 2
+Ce script produit ne grille MultiIndex par saison (visualisation de tous les matchs)
+ainsi que les statistiques consolidées par équipe et un résumé des tableaux NumPy
+que get_matchs() fournit au modèle
+on va aussi afficher les donnes en print pour visuellement voir nous même s'il y a des problèmes
+"""
 
 import pandas as pd
 import numpy as np
@@ -17,6 +19,29 @@ FICHIERS = {                         #les 3 fichiers CSV à charger
     "2025-2026": "2025-2026.csv",
 }
 
+def get_equipes_communes(fichiers):
+    """
+    Retourne la liste triée des équipes présentes dans toutes les 3 saisons
+    des CSVs
+    Les paramètres sont les fichiers csv et la fonction retourne
+    la liste des équipes présentes sur toutes les saisons
+    """
+    equipes_par_saison = []      #liste qui va avoir l'ensemble d'équipes de chaque saison
+
+    for fichier in fichiers.values():  #on parcourt chaque fichier CSV
+        df_temp = pd.read_csv(fichier, encoding='utf-8-sig')
+        equipes = set(df_temp['HomeTeam'].unique()) | set(df_temp['AwayTeam'].unique())    #union domicile + extérieur
+        equipes_par_saison.append(equipes)     #on ajoute l'ensemble de cette saison à la liste
+
+    communes = equipes_par_saison[0]       #on part de la première saison
+    for equipes in equipes_par_saison[1:]:      #on fait l'intersection avec chaque saison suivante
+        communes = communes & equipes
+
+    return sorted(communes)        #sorted() trie alphabétiquement et renvoie une liste
+
+
+EQUIPES_COMMUNES = get_equipes_communes(FICHIERS)
+
 def construire_grille(chargeur):
     """
     Construit la grille MultiIndex à partir d'un ChargeurDonnees déjà nettoyé
@@ -27,7 +52,7 @@ def construire_grille(chargeur):
     Les paramètres sont chargeur (ChargeurDonnees) : instance déjà chargée et nettoyée
     La fonciton retourne un pandas.DataFrame avec MultiIndex en colonnes
     """
-    equipes = chargeur.get_equipes()     #liste triée des 20 équipes de la saison
+    equipes = EQUIPES_COMMUNES    #on force les 17 équipes présentes sur les 3 saisons
     index_eq = chargeur.get_index_equipes()   #{nom: numéro} pour retrouver l'index
 
     colonnes = pd.MultiIndex.from_product([equipes, SOUS_COLONNES],      #pd.MultiIndex.from_product crée toutes les combinaisons (equipe × sous-colonne)
@@ -37,6 +62,8 @@ def construire_grille(chargeur):
 
     matchs_numpy = chargeur.get_matchs()      #on récupère le tableau NumPy : [idx_dom, idx_ext, buts_dom, buts_ext]
     df = chargeur.donnees.sort_values('Date').reset_index(drop=True)  #besoin des dates pour calculer les journées, on va trier le DataFrame interne par date pour numéroter les journées
+    df = df[df['HomeTeam'].isin(EQUIPES_COMMUNES) & df['AwayTeam'].isin(EQUIPES_COMMUNES)].reset_index(drop=True)   #on filtre les matchs impliquant des équipes absentes des 3 saisons, et on reset l'index après le filtre
+    df['journee'] = df.index + 1   #on recalcule journee sur les matchs filtrés uniquement
     noms = {v: k for k, v in index_eq.items()}     #dictionnaire inverse {numéro: nom} pour retrouver les noms depuis les index NumPy
 
     for i, ligne in df.iterrows():   #on parcourt chaque match du DataFrame trié
@@ -149,8 +176,8 @@ if __name__ == "__main__":
 
     matchs_tout = c_tout.get_matchs()    #tableau NumPy (1140, 4)
     print(f"\nTableau NumPy consolidé : {matchs_tout.shape}")
-    print(f"  ({len(c_tout.get_equipes())} équipes uniques sur 3 saisons)")
-    print(f"  Équipes : {c_tout.get_equipes()}")
+    print(f"  ({len(EQUIPES_COMMUNES)} équipes communes sur 3 saisons)")
+    print(f"  Équipes communes : {EQUIPES_COMMUNES}")
 
     print(f"\nStatistiques consolidées par équipe (moyennes sur 3 saisons) :")     #statistiques consolidées moyennes sur les 3 saisons
 
