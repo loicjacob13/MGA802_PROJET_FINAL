@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 
@@ -84,16 +83,63 @@ class ModelePoisson:
 
         return lam, mu
 
-    #cxalculer la perte pour que le modèle s'optimise
+    #calculer la perte pour que le modèle s'optimise
 
-    def perte(self,params,matchs):
+    def perte(self, params, matchs, poids=None):
+        attaques, defenses, avantage = self.deplier(params)
+
+        idx_dom = matchs[:, 0]
+        idx_ext = matchs[:, 1]
+        buts_dom = matchs[:, 2]
+        buts_ext = matchs[:, 3]
+
+        lam = np.exp(attaques[idx_dom] - defenses[idx_ext] + avantage)
+        mu = np.exp(attaques[idx_ext] - defenses[idx_dom])
+
+        erreur_dom = lam - buts_dom * np.log(lam)
+        erreur_ext = mu - buts_ext * np.log(mu)
+
+        if poids is not None:
+            perte_dom = np.sum(poids * erreur_dom)
+            perte_ext = np.sum(poids * erreur_ext)
+        else:
+            perte_dom = np.sum(erreur_dom)
+            perte_ext = np.sum(erreur_ext)
+
+        alpha = 0.001
+        regularisation = alpha * (np.sum(attaques ** 2) + np.sum(defenses ** 2))
+
+        return perte_dom + perte_ext + regularisation
+
+    '''def perte(self, params, matchs):
+        attaques, defenses, avantage = self.deplier(params)
+
+        idx_dom = matchs[:, 0]
+        idx_ext = matchs[:, 1]
+        buts_dom = matchs[:, 2]
+        buts_ext = matchs[:, 3]
+
+        lam = np.exp(attaques[idx_dom] - defenses[idx_ext] + avantage)
+        mu = np.exp(attaques[idx_ext] - defenses[idx_dom])
+
+        perte_dom = np.sum(lam - buts_dom * np.log(lam))
+        perte_ext = np.sum(mu - buts_ext * np.log(mu))
+
+        # ← NOUVEAU : régularisation L2 — pénalise les forces trop extrêmes
+        # Sans ça, le modèle peut attribuer des forces irréalistes aux grandes équipes
+        alpha = 0.001  # petit coefficient pour ne pas trop contraindre
+        regularisation = alpha * (np.sum(attaques ** 2) + np.sum(defenses ** 2))
+
+        return perte_dom + perte_ext + regularisation'''
+
+    '''def perte(self, params, matchs):
         """
         erreur du modèle de Poisson sur tous les matchs
         :param params:
         :param matchs:
         :return:
         """
-        #on découpe le vecteur params
+        # on découpe le vecteur params
         attaques, defenses, avantage = self._deplier(params)
 
         # On extrait chaque colonne du tableau de matchs.
@@ -109,12 +155,12 @@ class ModelePoisson:
         mu = np.exp(attaques[idx_ext] - defenses[idx_dom])
 
         # erreur de Poisson cote domicile, différence entre la prédiction des buts avec le nombre de but réel de ce match
-        #on se sert de la loi de la loi de probabilité qui donne la probabilité qu'on mette tant de buts
-        #P(k buts)=(lambda^k*exp(-lambda))/(k!)
-        #maximiliser la porbabilité que le modèle accorde aux vrais scores revient à maximiser la somme des logarithmes
+        # on se sert de la loi de la loi de probabilité qui donne la probabilité qu'on mette tant de buts
+        # P(k buts)=(lambda^k*exp(-lambda))/(k!)
+        # maximiliser la porbabilité que le modèle accorde aux vrais scores revient à maximiser la somme des logarithmes
 
-        #avec scipy.optimize.minimize, on ne peut que minimiser une perte donc on doit minimiser son opoosé
-        #le terme log(k!) n'est pas pris en compte ici car il ne dépedn que du nombre de but réel et n'est pas un indice de performance du modèle
+        # avec scipy.optimize.minimize, on ne peut que minimiser une perte donc on doit minimiser son opoosé
+        # le terme log(k!) n'est pas pris en compte ici car il ne dépedn que du nombre de but réel et n'est pas un indice de performance du modèle
 
         perte_dom = np.sum(lam - buts_dom * np.log(lam))
 
@@ -122,10 +168,30 @@ class ModelePoisson:
         perte_ext = np.sum(mu - buts_ext * np.log(mu))
 
         # Perte totale : plus elle est petite, mieux les forces collent aux vrais scores.
-        return perte_dom + perte_ext
+        return perte_dom + perte_ext'''
 
 #Entrainement du modèle
-    def entrainer(self,matchs):
+    def entrainer(self, matchs, poids=None):
+        """
+        Apprend les paramètres en minimisant la perte pondérée.
+        poids : tableau NumPy de même longueur que matchs (optionnel).
+                Si None, tous les matchs ont le même poids.
+        """
+        from scipy.optimize import minimize
+
+        depart = np.zeros(2 * self.n_equipes + 1)
+
+        resultat = minimize(
+            lambda p: self.perte(p, matchs, poids),
+            x0=depart,
+            method="BFGS",
+        )
+
+        self.params = resultat.x
+        self.perte_finale = resultat.fun
+        return None
+
+    '''def entrainer(self,matchs):
         """
         apprend les parametres avec scipy et essaie d'ajuster ses valeurs pour être fidèle à chaques équipes
 
@@ -149,7 +215,33 @@ class ModelePoisson:
         self.perte_finale = resultat.fun
 
         # entrainer ne renvoie rien : il met juste a jour self.params.
-        return None
+        return None'''
+
+    '''def entrainer(self,matchs):
+        """
+        apprend les parametres avec scipy et essaie d'ajuster ses valeurs pour être fidèle à chaques équipes
+
+        :param matchs:
+        :return:
+        """
+        from scipy.optimize import minimize #import de l'outil d'opti
+        #point de départ, on fixe chaque valeurs égales à 0,
+        depart=np.zeros(2 * self.n_equipes + 1)
+
+        resultat = minimize(
+            lambda p: self.perte(p, matchs),  # fonction a minimiser
+            x0=depart,  # point de depart
+            method="BFGS",  # methode d'optimisation classique
+        )
+
+        # On garde les paramètres appris aka le meilleur reglage trouvé.
+        self.params = resultat.x
+
+        # On garde aussi la valeur finale de la perte (pour verifier que ca a baisse).
+        self.perte_finale = resultat.fun
+
+        # entrainer ne renvoie rien : il met juste a jour self.params.
+        return None'''
 
 #sorties du code pour que ça soit utilisable pour ensuite simuler
     def get_forces(self):
@@ -168,7 +260,7 @@ class ModelePoisson:
 
         :return:
         """
-        _, _, avantage = self._deplier(self.params) #les 2 premiers termes ne nous interesent pas d'où le _
+        _, _, avantage = self.deplier(self.params) #les 2 premiers termes ne nous interesent pas d'où le _
         return float(avantage)
     def get_index_equipes(self):
         return self.index_equipes
