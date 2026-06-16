@@ -16,7 +16,7 @@ class ModelePoisson:
         :param n_equipes: nombre d'équipe différente, ici fixé à 4
         '''
         self.n_equipes = n_equipes
-        self.params=np.zeros(2*n_equipes+1) #dernier paramètre sera le facteur de l'avantage de l'équipe
+        self.params=np.zeros(3 * n_equipes)
         #le vecteur params consiste à appliquer une donnée force d'attaque et une donnée force défense et 1 avnatage domicile qui sera commun à tous
         #ici, il y a 3 équipes didérentes donc le vecteur params prendra juste 7 termes car le facteur de jouer à domicile est jugé uniforme à tous
         self.noms_equipes = None
@@ -60,10 +60,10 @@ class ModelePoisson:
         n=self.n_equipes #nombre d'équipe
         attaques=params[:n]
         defenses=params[n:2*n]
-        avantage=params[2*n] #dernier nombre caractérise l'avanatge domicile
+        avantage=params[2*n:3*n]
         return attaques, defenses, avantage
 
-    #foncction qui calcule les buts attendus
+    #fonction qui calcule les buts attendus
 
     def calculer_lambda_mu(self,idx_dom,idx_ext):
         """
@@ -75,8 +75,8 @@ class ModelePoisson:
         # On decoupe les parametres actuels en attaques, defenses, avantage.
         attaques, defenses, avantage = self.deplier(self.params)
 
-        # formule du modele pour l'equipe a domicile (avec le bonus d'avantage).
-        lam = np.exp(attaques[idx_dom] - defenses[idx_ext] + avantage)
+        # formule du modele pour l'equipe a domicile (avec le bonus d'avantage en fonction de l'équipe).
+        lam = np.exp(attaques[idx_dom] - defenses[idx_ext] + avantage[idx_dom])
 
         # formule pour l'equipe a l'exterieur (pas de bonus domicile pour elle).
         mu = np.exp(attaques[idx_ext] - defenses[idx_dom])
@@ -93,7 +93,7 @@ class ModelePoisson:
         buts_dom = matchs[:, 2]
         buts_ext = matchs[:, 3]
 
-        lam = np.exp(attaques[idx_dom] - defenses[idx_ext] + avantage)
+        lam = np.exp(attaques[idx_dom] - defenses[idx_ext] + avantage[idx_dom])
         mu = np.exp(attaques[idx_ext] - defenses[idx_dom])
 
         erreur_dom = lam - buts_dom * np.log(lam)
@@ -179,7 +179,7 @@ class ModelePoisson:
         """
         from scipy.optimize import minimize
 
-        depart = np.zeros(2 * self.n_equipes + 1)
+        depart = np.zeros(3 * self.n_equipes)
 
         resultat = minimize(
             lambda p: self.perte(p, matchs, poids),
@@ -261,7 +261,7 @@ class ModelePoisson:
         :return:
         """
         _, _, avantage = self.deplier(self.params) #les 2 premiers termes ne nous interesent pas d'où le _
-        return float(avantage)
+        return {i: float(avantage[i]) for i in range(self.n_equipes)}
     def get_index_equipes(self):
         return self.index_equipes
 
@@ -270,5 +270,3 @@ class ModelePoisson:
         donnees = {"params": self.params, "n_equipes": self.n_equipes,
                    "noms_equipes": self.noms_equipes, "index_equipes": self.index_equipes}
         pd.to_pickle(donnees, chemin_pickle)
-
-

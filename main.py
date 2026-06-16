@@ -29,9 +29,9 @@ matchs_3 = c3.get_matchs()
 matchs_tous = np.vstack([matchs_1, matchs_2, matchs_3])
 
 # Vecteur de poids : une valeur par match
-poids_1 = np.ones(len(matchs_1)) * (1/7)
-poids_2 = np.ones(len(matchs_2)) * (2/7)
-poids_3 = np.ones(len(matchs_3)) * (4/7)
+poids_1 = np.ones(len(matchs_1)) * (1/6)
+poids_2 = np.ones(len(matchs_2)) * (2/6)
+poids_3 = np.ones(len(matchs_3)) * (3/6)
 poids   = np.concatenate([poids_1, poids_2, poids_3])
 
 print(f"Matchs totaux : {len(matchs_tous)}")   # doit afficher 1140
@@ -49,12 +49,13 @@ modele.entrainer(matchs_tous, poids=poids)
 forces   = modele.get_forces()
 avantage = modele.get_avantage_domicile()
 
-print(f"\nAvantage domicile appris : {avantage:.3f}")
-print(f"\n{'Équipe':<20} {'Attaque':>10} {'Défense':>10} {'Lambda dom':>12}")
+print(f"\n{'Équipe':<20} {'Attaque':>10} {'Défense':>10} {'Avantage DOM':>14} {'Lambda dom':>12}")
+print("-" * 70)
 for nom, idx in sorted(index_equipes.items()):
     att, def_ = forces[idx]
-    lam = np.exp(att - def_ + avantage)
-    print(f"{nom:<20} {att:>10.3f} {def_:>10.3f} {lam:>12.2f}")
+    av  = avantage[idx]
+    lam = np.exp(att - def_ + av)  # lambda contre une équipe de force moyenne (def=0)
+    print(f"{nom:<20} {att:>10.3f} {def_:>10.3f} {av:>14.3f} {lam:>12.2f}")
 
 # ------------------------------------------------------------------
 # 4. SIMULATION MONTE-CARLO

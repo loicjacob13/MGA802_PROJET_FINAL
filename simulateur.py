@@ -23,6 +23,7 @@ class Simulateur:
         # attaques[i] = force d'attaque de l'équipe i
         self.attaques = np.array([forces[i][0] for i in range(self.n_equipes)])
         self.defenses = np.array([forces[i][1] for i in range(self.n_equipes)])
+        self.avantages = np.array([avantage_domicile[i] for i in range(self.n_equipes)])
 
     # ------------------------------------------------------------------
     # ÉTAPE 1 — Simuler un seul match
@@ -36,7 +37,7 @@ class Simulateur:
         defense_ext = self.defenses[index_ext]
 
         # Formule du modèle de Poisson (voir brief_guillaume.md §2)
-        lam = np.exp(attaque_dom - defense_ext + self.avantage_domicile)  # buts attendus dom.
+        lam = np.exp(attaque_dom - defense_ext + self.avantages[index_dom])  # buts attendus dom.
         mu  = np.exp(attaque_ext - defense_dom)                           # buts attendus ext.
 
         # Tirage aléatoire selon la loi de Poisson
