@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 
 
-from grille_test import construire_grille
-grille = construire_grille() #on a donc la grille fictive ici
+#from grille_test import construire_grille
+#grille = construire_grille() #on a donc la grille fictive ici
 
 #il faut commencer à créer la classe
 

@@ -60,7 +60,11 @@ for nom, idx in sorted(index_equipes.items()):
 # 4. SIMULATION MONTE-CARLO
 # ------------------------------------------------------------------
 sim      = Simulateur(forces, avantage, index_equipes)
-resultats = sim.simuler_monte_carlo(n_simulations=500)
+resultats = sim.simuler_monte_carlo(n_simulations=100)
+
+
+#test de 1 saison juste.
+#resultats = sim.simuler_monte_carlo(n_simulations=1)
 
 print("\n--- Résultats Monte-Carlo ---")
 print(resultats.to_string())
