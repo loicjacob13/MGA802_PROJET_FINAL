@@ -4,6 +4,9 @@ from modele import ModelePoisson
 from simulateur import Simulateur
 from visualisation import Visualiseur
 import matplotlib.pyplot as plt
+from forces_promus import forces_pour_position_cible
+
+
 
 # ------------------------------------------------------------------
 # 1. CHARGEMENT SÉPARÉ DES 3 SAISONS
@@ -77,5 +80,87 @@ visu = Visualiseur(resultats)
 visu.graphique_probabilites_titre()
 visu.graphique_classement_moyen()
 visu.graphique_distribution_points("Arsenal", simulateur=sim)
+
+plt.show()
+
+
+##nouvelles partie
+# ----------------------------------------------------------------------
+# 1. TROUVER LES 3 ÉQUIPES RELÉGUÉES (les 3 dernières de 2025/2026)
+# ----------------------------------------------------------------------
+# 'resultats' vient de ta simulation Monte-Carlo, il est trié par position_moyenne.
+# Mais pour les VRAIS relégués, on regarde plutôt le vrai classement de la dernière
+# saison. Ici on suppose que tu connais les 3 relégués de 2025/2026 :
+reLegues = ["West Ham", "Burnley", "Wolves"]  # les 3 reléguées de 2025/2026
+
+# ----------------------------------------------------------------------
+# 2. LES 3 PROMUS ET LEUR POSITION CIBLE
+# ----------------------------------------------------------------------
+promus = [
+    ("Coventry", 15.0),  # 1er entrant (champion de Championship)
+    ("Ipswich", 16.9),  # 2e entrant
+    ("Millwall", 17.4),  # 3e entrant
+]
+
+# ----------------------------------------------------------------------
+# 3. CONSTRUCTION DES FORCES ET DE L'INDEX DE LA NOUVELLE SAISON
+# ----------------------------------------------------------------------
+# On part des forces existantes (dict {index: (attaque, defense)}) et de l'index
+# {nom: numéro}. On reconstruit deux dicts propres pour les 20 équipes finales.
+
+# ----------------------------------------------------------------------
+# 3. CONSTRUCTION DES FORCES, DE L'AVANTAGE ET DE L'INDEX (CORRIGÉ)
+# ----------------------------------------------------------------------
+# Dictionnaire inverse {index: nom} pour retrouver les noms
+nom_de_index = {idx: nom for nom, idx in index_equipes.items()}
+
+# On garde les équipes existantes SAUF les reléguées
+forces_saison = {}      # {nouveau_numéro: (attaque, defense)}
+avantage_saison = {}    # {nouveau_numéro: avantage domicile}   <-- AJOUTÉ
+index_saison = {}       # {nom: nouveau_numéro}
+numero = 0              # compteur de numéro pour les nouvelles équipes
+
+for ancien_idx, (att, defe) in forces.items():
+    nom = nom_de_index[ancien_idx]      # nom de cette équipe
+    if nom in reLegues:                 # on saute les reléguées
+        continue
+    forces_saison[numero] = (att, defe)         # on garde ses forces
+    avantage_saison[numero] = avantage[ancien_idx]  # on garde SON avantage  <-- AJOUTÉ
+    index_saison[nom] = numero          # on l'ajoute à l'index
+    numero += 1
+
+# On ajoute maintenant les 3 promus avec leurs forces approximées
+for nom, position_cible in promus:
+    att, defe = forces_pour_position_cible(position_cible, resultats, forces, index_equipes)
+    forces_saison[numero] = (att, defe)
+    # Pour l'avantage du promu : on prend l'avantage MOYEN de toutes les équipes
+    # (un promu n'a pas d'avantage domicile connu, donc on met la moyenne)
+    avantage_saison[numero] = np.mean(list(avantage.values()))   # <-- AJOUTÉ
+    index_saison[nom] = numero
+    numero += 1
+    print(f"{nom} -> attaque {att:.3f}, défense {defe:.3f}")
+
+print(f"\nNombre d'équipes pour la nouvelle saison : {len(index_saison)}")  # doit afficher 20
+
+# ----------------------------------------------------------------------
+# 4. SIMULATION DE LA NOUVELLE SAISON AVEC LES 20 ÉQUIPES
+# ----------------------------------------------------------------------
+from simulateur import Simulateur
+
+# On passe maintenant avantage_saison (bons numéros) au lieu de avantage
+sim_nouvelle = Simulateur(forces_saison, avantage_saison, index_saison)   # <-- CORRIGÉ
+resultats_nouvelle = sim_nouvelle.simuler_monte_carlo(n_simulations=500)
+
+print("\n--- Classement prédit de la nouvelle saison ---")
+print(resultats_nouvelle.to_string())
+
+# ----------------------------------------------------------------------
+# 5bis. GRAPHIQUES DE LA NOUVELLE SAISON
+# ----------------------------------------------------------------------
+# On réutilise ta classe Visualiseur, mais avec les résultats de la nouvelle saison.
+visu_nouvelle = Visualiseur(resultats_nouvelle)
+visu_nouvelle.graphique_probabilites_titre()
+visu_nouvelle.graphique_classement_moyen()
+visu_nouvelle.graphique_distribution_points("Arsenal", simulateur=sim_nouvelle)
 
 plt.show()
