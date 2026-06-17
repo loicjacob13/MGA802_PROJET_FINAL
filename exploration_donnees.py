@@ -13,34 +13,35 @@ from donnees import ChargeurDonnees #on importe la classe qu'on a codée qui est
 SOUS_COLONNES = ["journee", "buts_dom", "buts_ext", "resultat",     #sous-colonnes affichées dans chaque case de la grille
                  "pts_dom", "pts_ext", "diff_buts", "total_buts"]
 
-FICHIERS = {                         #les 3 fichiers CSV à charger
+FICHIERS = {                         #les 8 fichiers CSV à charger
+    "2018-2019": "2018-2019.csv",
+    "2019-2020": "2019-2020.csv",
+    "2020-2021": "2020-2021.csv",
+    "2021-2022": "2021-2022.csv",
+    "2022-2023": "2022-2023.csv",
     "2023-2024": "2023-2024.csv",
     "2024-2025": "2024-2025.csv",
     "2025-2026": "2025-2026.csv",
 }
 
-def get_equipes_communes(fichiers):
+def get_toutes_les_equipes(fichiers):
     """
-    Retourne la liste triée des équipes présentes dans toutes les 3 saisons
-    des CSVs
+    Retourne la liste triée de TOUTES les équipes présentes sur les 8 saisons
+    des CSVs (Union au lieu d'intersection)
     Les paramètres sont les fichiers csv et la fonction retourne
-    la liste des équipes présentes sur toutes les saisons
+    la liste des équipes présentes sur l'ensemble des saisons
     """
-    equipes_par_saison = []      #liste qui va avoir l'ensemble d'équipes de chaque saison
+    toutes_les_equipes = set()      #ensemble vide pour stocker toutes les équipes uniques
 
     for fichier in fichiers.values():  #on parcourt chaque fichier CSV
         df_temp = pd.read_csv(fichier, encoding='utf-8-sig')
         equipes = set(df_temp['HomeTeam'].unique()) | set(df_temp['AwayTeam'].unique())    #union domicile + extérieur
-        equipes_par_saison.append(equipes)     #on ajoute l'ensemble de cette saison à la liste
+        toutes_les_equipes.update(equipes)     #on ajoute l'ensemble de cette saison à l'ensemble global (Union)
 
-    communes = equipes_par_saison[0]       #on part de la première saison
-    for equipes in equipes_par_saison[1:]:      #on fait l'intersection avec chaque saison suivante
-        communes = communes & equipes
-
-    return sorted(communes)        #sorted() trie alphabétiquement et renvoie une liste
+    return sorted(toutes_les_equipes)        #sorted() trie alphabétiquement et renvoie une liste
 
 
-EQUIPES_COMMUNES = get_equipes_communes(FICHIERS)
+TOUTES_LES_EQUIPES = get_toutes_les_equipes(FICHIERS)
 
 def construire_grille(chargeur):
     """
@@ -52,7 +53,7 @@ def construire_grille(chargeur):
     Les paramètres sont chargeur (ChargeurDonnees) : instance déjà chargée et nettoyée
     La fonciton retourne un pandas.DataFrame avec MultiIndex en colonnes
     """
-    equipes = EQUIPES_COMMUNES    #on force les 17 équipes présentes sur les 3 saisons
+    equipes = TOUTES_LES_EQUIPES    #on force TOUTES les équipes présentes sur les 8 saisons
     index_eq = chargeur.get_index_equipes()   #{nom: numéro} pour retrouver l'index
 
     colonnes = pd.MultiIndex.from_product([equipes, SOUS_COLONNES],      #pd.MultiIndex.from_product crée toutes les combinaisons (equipe × sous-colonne)
@@ -62,7 +63,7 @@ def construire_grille(chargeur):
 
     matchs_numpy = chargeur.get_matchs()      #on récupère le tableau NumPy : [idx_dom, idx_ext, buts_dom, buts_ext]
     df = chargeur.donnees.sort_values('Date').reset_index(drop=True)  #besoin des dates pour calculer les journées, on va trier le DataFrame interne par date pour numéroter les journées
-    df = df[df['HomeTeam'].isin(EQUIPES_COMMUNES) & df['AwayTeam'].isin(EQUIPES_COMMUNES)].reset_index(drop=True)   #on filtre les matchs impliquant des équipes absentes des 3 saisons, et on reset l'index après le filtre
+    df = df[df['HomeTeam'].isin(TOUTES_LES_EQUIPES) & df['AwayTeam'].isin(TOUTES_LES_EQUIPES)].reset_index(drop=True)   #on filtre les matchs, et on reset l'index après le filtre
     df['journee'] = df.index + 1   #on recalcule journee sur les matchs filtrés uniquement
     noms = {v: k for k, v in index_eq.items()}     #dictionnaire inverse {numéro: nom} pour retrouver les noms depuis les index NumPy
 
@@ -163,23 +164,23 @@ if __name__ == "__main__":
         afficher_resume_numpy(c, saison)         #aperçu du tableau NumPy
 
 
-    #Par la suite, les données vont être consolidées sur 3 saisons
+    #Par la suite, les données vont être consolidées sur 8 saisons
     # Ce sera utile pour entraîner le modèle sur plusieurs saisons à la fois
 
     print("\n" + "=" * 80)
-    print("  DONNÉES CONSOLIDÉES SUR LES 3 SAISONS COMBINÉES")
+    print("  DONNÉES CONSOLIDÉES SUR LES 8 SAISONS COMBINÉES")
     print("=" * 80)
 
-    c_tout = ChargeurDonnees(list(FICHIERS.values()))    #on charge les 3 saisons d'un coup avec la liste de chemins
+    c_tout = ChargeurDonnees(list(FICHIERS.values()))    #on charge les 8 saisons d'un coup avec la liste de chemins
 
     c_tout.nettoyer()
 
-    matchs_tout = c_tout.get_matchs()    #tableau NumPy (1140, 4)
+    matchs_tout = c_tout.get_matchs()    #tableau NumPy
     print(f"\nTableau NumPy consolidé : {matchs_tout.shape}")
-    print(f"  ({len(EQUIPES_COMMUNES)} équipes communes sur 3 saisons)")
-    print(f"  Équipes communes : {EQUIPES_COMMUNES}")
+    print(f"  ({len(TOUTES_LES_EQUIPES)} équipes uniques sur 8 saisons)")
+    print(f"  Équipes uniques : {TOUTES_LES_EQUIPES}")
 
-    print(f"\nStatistiques consolidées par équipe (moyennes sur 3 saisons) :")     #statistiques consolidées moyennes sur les 3 saisons
+    print(f"\nStatistiques consolidées par équipe (moyennes sur 8 saisons) :")     #statistiques consolidées moyennes sur les 8 saisons
 
     stats_tout = c_tout.statistiques_equipes()
     print(stats_tout.round(3).to_string())
