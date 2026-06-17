@@ -1,7 +1,4 @@
 """
-recherche_ponderation.py — Trouve le meilleur trio de pondération des saisons.
-Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
-
 PRINCIPE :
 On teste plusieurs trios de poids (ex : 60%-30%-10%) pour pondérer les 3 anciennes
 saisons. Pour chaque trio, on entraîne le modèle, on simule la saison 2025/2026, puis
@@ -18,10 +15,10 @@ from simulateur import Simulateur
 # ----------------------------------------------------------------------
 # 1. CHARGEMENT DES DONNÉES (avec tes fonctions ChargeurDonnees et nettoyer)
 # ----------------------------------------------------------------------
-c_2223 = ChargeurDonnees("2022-2023.csv")   # la plus ancienne
-c_2324 = ChargeurDonnees("2023-2024.csv")   # intermédiaire
-c_2425 = ChargeurDonnees("2024-2025.csv")   # la plus récente avant la saison testée
-c_2526 = ChargeurDonnees("2025-2026.csv")   # la saison à PRÉDIRE (vrais résultats connus)
+c_2223 = ChargeurDonnees("2021-2022.csv")   # la plus ancienne
+c_2324 = ChargeurDonnees("2022-2023.csv")   # intermédiaire
+c_2425 = ChargeurDonnees("2023-2024.csv")   # la plus récente avant la saison testée
+c_2526 = ChargeurDonnees("2024-2025.csv")   # la saison à PRÉDIRE (vrais résultats connus)
 
 c_2223.nettoyer()
 c_2324.nettoyer()
@@ -75,13 +72,27 @@ matchs_2526 = matchs_index_commun(c_2526)
 
 
 # ----------------------------------------------------------------------
-# 4. LE VRAI CLASSEMENT 2025/2026 (notre référence à imiter)
+# 4. INDEX ET VRAI CLASSEMENT DE 2025/2026 (référentiel à 20 équipes)
 # ----------------------------------------------------------------------
-# On reprend exactement ta méthode de simuler_saison() : on compte les points
-# avec la règle 3/1/0, puis on trie avec pandas .sort_values() (vu en cours).
+# Le modèle apprend ses forces sur ~25 équipes (3 saisons cumulées). Mais on ne
+# SIMULE et ne CLASSE que les 20 équipes qui jouent vraiment en 2025/2026.
+# On crée donc un index renuméroté de 0 à 19, propre à cette saison.
+noms_2526 = c_2526.get_equipes()                            # les 20 noms de 2025/2026
+index_2526 = {nom: i for i, nom in enumerate(noms_2526)}    # {nom: 0..19}
+n_2526 = len(index_2526)                                    # = 20
+print(f"Nombre d'équipes simulées (saison 2025/2026) : {n_2526}")
+
+# Matchs réels de 2025/2026 reconstruits avec l'index à 20 équipes
+brutes_2526 = c_2526.donnees[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']].to_numpy()
+matchs_2526_reduit = np.array(
+    [[index_2526[l[0]], index_2526[l[1]], int(l[2]), int(l[3])] for l in brutes_2526],
+    dtype=int
+)
+
+# On reprend exactement ta méthode de simuler_saison() : règle 3/1/0 + sort_values.
 def vrai_classement(matchs):
-    """Calcule le vrai classement final à partir des vrais matchs d'une saison."""
-    points = np.zeros(n_equipes, dtype=int)   # points cumulés par équipe
+    """Calcule le vrai classement final à partir des vrais matchs (20 équipes)."""
+    points = np.zeros(n_2526, dtype=int)   # points cumulés par équipe
 
     for idx_dom, idx_ext, buts_dom, buts_ext in matchs:   # parcours de chaque vrai match
         if buts_dom > buts_ext:        # victoire domicile
@@ -94,32 +105,40 @@ def vrai_classement(matchs):
 
     # On construit un DataFrame, comme dans ton simuler_saison()
     classement = pd.DataFrame({
-        'equipe': list(range(n_equipes)),   # numéro de chaque équipe
+        'equipe': list(range(n_2526)),   # numéro de chaque équipe (0 à 19)
         'points': points,
     })
-    # Tri par points décroissants (même méthode que ton simuler_saison)
     classement = classement.sort_values('points', ascending=False).reset_index(drop=True)
-    classement['position'] = classement.index + 1   # position de 1 à n
+    classement['position'] = classement.index + 1   # position de 1 à 20
 
-    # On range les positions dans un tableau indexé par numéro d'équipe
-    positions = np.zeros(n_equipes, dtype=int)
+    positions = np.zeros(n_2526, dtype=int)
     for _, ligne in classement.iterrows():
         positions[ligne['equipe']] = ligne['position']
     return positions
 
-classement_reel = vrai_classement(matchs_2526)   # référence calculée une seule fois
-
-# On garde seulement les équipes réellement présentes en 2025/2026 pour comparer
-equipes_2526 = set(index_equipes[nom] for nom in c_2526.get_equipes())
+classement_reel = vrai_classement(matchs_2526_reduit)   # référence calculée une seule fois
 
 
 # ----------------------------------------------------------------------
 # 5. ÉVALUATION D'UN TRIO DE PONDÉRATION
 # ----------------------------------------------------------------------
+def forces_reduites(forces_completes):
+    """
+    Extrait, depuis les forces apprises sur ~25 équipes (index commun), seulement
+    les 20 équipes de 2025/2026, et les renumérote de 0 à 19.
+    Renvoie un dict {0..19: (attaque, defense)} prêt pour le Simulateur.
+    """
+    forces_20 = {}
+    for nom, idx_reduit in index_2526.items():     # pour chaque équipe de 2025/2026
+        idx_complet = index_equipes[nom]           # son numéro dans l'index commun
+        forces_20[idx_reduit] = forces_completes[idx_complet]   # on recopie ses forces
+    return forces_20
+
+
 def evaluer_trio(p1, p2, p3):
     """
-    Entraîne le modèle avec ces poids, simule 2025/2026 et renvoie l'erreur de
-    classement. p1=poids 2022-2023, p2=2023-2024, p3=2024-2025.
+    Entraîne le modèle avec ces poids, simule 2025/2026 (20 équipes) et renvoie
+    l'erreur de classement. p1=poids 2022-2023, p2=2023-2024, p3=2024-2025.
     Plus l'erreur est petite, meilleur est le trio.
     """
     matchs_tous = np.vstack([matchs_2223, matchs_2324, matchs_2425])   # on empile les 3 saisons
@@ -131,24 +150,26 @@ def evaluer_trio(p1, p2, p3):
         np.ones(len(matchs_2425)) * p3,
     ])
 
-    # entraînement avec tes fonctions
+    # entraînement sur TOUTES les équipes (~25), avec tes fonctions
     modele = ModelePoisson(n_equipes)
     modele.entrainer(matchs_tous, poids=poids)
 
-    # simulation avec tes fonctions
-    forces = modele.get_forces()
+    # on récupère les forces, puis on garde seulement les 20 équipes de 2025/2026
+    forces = forces_reduites(modele.get_forces())
     avantage = modele.get_avantage_domicile()
-    sim = Simulateur(forces, avantage, index_equipes)
-    resultats = sim.simuler_monte_carlo(n_simulations=200)   # 200 simulations suffisent ici
 
-    # on transforme la position moyenne (déjà triée) en classement prédit 1 à n
-    classement_predit = np.zeros(n_equipes, dtype=int)
+    # simulation avec tes fonctions, mais sur l'index à 20 équipes
+    sim = Simulateur(forces, avantage, index_2526)
+    resultats = sim.simuler_monte_carlo(n_simulations=600)   # 200 simulations suffisent ici
+
+    # on transforme la position moyenne (déjà triée) en classement prédit 1 à 20
+    classement_predit = np.zeros(n_2526, dtype=int)
     for position, nom in enumerate(resultats.index):
-        classement_predit[index_equipes[nom]] = position + 1
+        classement_predit[index_2526[nom]] = position + 1
 
-    # erreur = somme des écarts de position, seulement pour les équipes de 2025/2026
+    # erreur = somme des écarts de position sur les 20 équipes
     erreur = 0
-    for idx in equipes_2526:
+    for idx in range(n_2526):
         erreur += abs(classement_predit[idx] - classement_reel[idx])
     return erreur
 
@@ -159,7 +180,7 @@ def evaluer_trio(p1, p2, p3):
 meilleur_erreur = np.inf   # on minimise, donc on part de l'infini
 meilleur_trio = None
 
-pas = np.arange(0.0, 1.01, 0.1)   # poids possibles : 0.0, 0.1, ..., 1.0
+pas = np.arange(0.0, 1.01, 0.01)   # poids possibles : 0.0, 0.1, ..., 1.0
 
 for p1 in pas:                     # poids saison la plus ancienne
     for p2 in pas:                 # poids saison intermédiaire
@@ -188,3 +209,43 @@ print(f"  -> 2023-2024 : {meilleur_trio[1]*100:.0f}%")
 print(f"  -> 2024-2025 : {meilleur_trio[2]*100:.0f}%")
 print(f"Erreur de classement totale : {meilleur_erreur}")
 print("========================================")
+
+
+# ----------------------------------------------------------------------
+# 8. AFFICHAGE DU CLASSEMENT : PRÉDIT vs RÉEL (pour le meilleur trio)
+# ----------------------------------------------------------------------
+# On rejoue une dernière fois le meilleur trio pour récupérer son classement prédit
+p1, p2, p3 = meilleur_trio
+matchs_tous = np.vstack([matchs_2223, matchs_2324, matchs_2425])
+poids = np.concatenate([
+    np.ones(len(matchs_2223)) * p1,
+    np.ones(len(matchs_2324)) * p2,
+    np.ones(len(matchs_2425)) * p3,
+])
+
+modele = ModelePoisson(n_equipes)
+modele.entrainer(matchs_tous, poids=poids)
+forces = forces_reduites(modele.get_forces())   # on garde seulement les 20 équipes
+avantage = modele.get_avantage_domicile()
+sim = Simulateur(forces, avantage, index_2526)  # simulation sur l'index à 20
+resultats = sim.simuler_monte_carlo(n_simulations=200)
+
+# Position prédite de chaque équipe (1 à 20)
+classement_predit = np.zeros(n_2526, dtype=int)
+for position, nom in enumerate(resultats.index):
+    classement_predit[index_2526[nom]] = position + 1
+
+# Dictionnaire inverse {numéro: nom} pour afficher les vrais noms
+nom_de_index = {i: nom for nom, i in index_2526.items()}
+
+# On affiche côte à côte, trié par le VRAI classement 2025/2026
+print(f"\n{'Pos réelle':<12}{'Équipe':<20}{'Pos prédite':<14}{'Écart':<8}")
+print("-" * 54)
+
+# On parcourt les 20 équipes dans l'ordre de leur vraie position
+equipes_par_position = sorted(range(n_2526), key=lambda idx: classement_reel[idx])
+for idx in equipes_par_position:
+    pos_reelle  = classement_reel[idx]
+    pos_predite = classement_predit[idx]
+    ecart       = abs(pos_predite - pos_reelle)
+    print(f"{pos_reelle:<12}{nom_de_index[idx]:<20}{pos_predite:<14}{ecart:<8}")
