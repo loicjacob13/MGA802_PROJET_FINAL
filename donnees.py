@@ -111,7 +111,7 @@ class ChargeurDonnees:   #création de la classe
             for ligne in donnees_brutes    #on parcourt chaque match
         ]
 
-        return np.array(lignes, dtype=int)     # np.array convertit la liste en tableau NumPy, dtype=int force le type entier
+        return np.array(lignes, dtype=int)     #np.array convertit la liste en tableau NumPy, dtype=int force le type entier
 
     def statistiques_equipes(self):
         """

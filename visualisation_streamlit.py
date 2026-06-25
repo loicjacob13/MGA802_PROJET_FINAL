@@ -1,7 +1,3 @@
-"""
-Rendu graphique brutaliste et monochrome.
-visualisation_streamlit.py
-"""
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -9,7 +5,8 @@ import pandas as pd
 
 class Visualiseur:
     def __init__(self, resultats: pd.DataFrame):
-        self.resultats = resultats.sort_values('position_moyenne')
+        # On trie pour avoir les meilleures équipes en haut par défaut
+        self.resultats = resultats.sort_values('position_moyenne', ascending=True)
 
     def graphique_probabilites_titre(self):
         """Graphique à barres horizontales strict."""
@@ -24,13 +21,9 @@ class Visualiseur:
             textposition='outside',
             textfont=dict(family="Arial", size=12, color="#000000")
         ))
-
         fig.update_layout(
-            title=dict(
-                text="<b>Probabilités de titre de champion</b>",
-                font=dict(family="Arial", size=16, color="#000000"),
-                pad=dict(b=20)
-            ),
+            title=dict(text="<b>Probabilités de titre de champion</b>",
+                       font=dict(family="Arial", size=16, color="#000000")),
             plot_bgcolor='#ffffff',
             paper_bgcolor='#ffffff',
             showlegend=False,
@@ -42,7 +35,7 @@ class Visualiseur:
         return fig
 
     def graphique_classement_moyen(self):
-        """Ligne de trajectoire brute."""
+        """Ligne de trajectoire conventionnelle (Gauche->Droite, Haut->Bas)."""
         df = self.resultats.sort_values('position_moyenne', ascending=True)
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -55,24 +48,23 @@ class Visualiseur:
             textfont=dict(family="Arial", size=11, color="#000000")
         ))
 
+        # Lignes verticales de repère
         fig.add_vline(x=4.5, line_width=2, line_dash="dash", line_color="#888888")
         fig.add_vline(x=17.5, line_width=2, line_dash="dash", line_color="#888888")
 
         fig.update_layout(
-            title=dict(
-                text="<b>Position moyenne au classement final</b>",
-                font=dict(family="Arial", size=16, color="#000000")
-            ),
+            title=dict(text="<b>Position moyenne au classement final</b>",
+                       font=dict(family="Arial", size=16, color="#000000")),
             xaxis=dict(
                 title=dict(text="Position", font=dict(color="#000000")),
-                range=[20.5, 0.5],
+                range=[0.5, 20.5],  # Lecture de 1 à 20 de gauche à droite
                 dtick=1,
                 side="top",
                 gridcolor='#e0e0e0',
                 tickfont=dict(color="#000000")
             ),
             yaxis=dict(
-                autorange="reversed",
+                autorange="reversed",  # Le 1er est en haut, le 20e en bas
                 showgrid=True,
                 gridcolor='#f0f0f0',
                 tickfont=dict(color="#000000")
@@ -86,31 +78,23 @@ class Visualiseur:
 
     def graphique_distribution_points(self, nom_equipe: str, simulateur):
         points = simulateur.points_bruts[nom_equipe]
-
         fig = go.Figure()
         fig.add_trace(go.Histogram(
             x=points,
             histnorm='probability',
-            # On force une couleur sombre pour que ça soit visible sur fond blanc
             marker=dict(color='#888888', line=dict(color='#000000', width=1)),
             xbins=dict(start=min(points) - 0.5, end=max(points) + 0.5, size=1)
         ))
-
         moyenne = points.mean()
         fig.add_vline(x=moyenne, line_width=3, line_color="#000000")
-
         fig.update_layout(
-            title=dict(
-                text=f"<b>Distribution des points : {nom_equipe}</b>",
-                font=dict(color="#000000")
-            ),
+            title=dict(text=f"<b>Distribution des points: {nom_equipe}</b>", font=dict(color="#000000")),
             plot_bgcolor='#ffffff',
             paper_bgcolor='#ffffff',
-            # On force explicitement la couleur des axes et des polices en noir
             yaxis=dict(showgrid=True, gridcolor='#e0e0e0', tickfont=dict(color="#000000")),
             xaxis=dict(showgrid=False, tickfont=dict(color="#000000")),
             height=350,
             margin=dict(l=50, r=20, t=50, b=40),
-            font=dict(color="#000000")  # Force tout le texte du graphique en noir
+            font=dict(color="#000000")
         )
         return fig
