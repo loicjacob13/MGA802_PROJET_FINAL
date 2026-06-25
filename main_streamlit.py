@@ -112,7 +112,7 @@ def executer_calcul_modele(p1, p2, p3, p4, p5, p6, p7, p8):
     modele = ModelePoisson(len(index_univ))
     modele.entrainer(matchs_univ, poids=poids_global)
     forces_univ = modele.get_forces()
-    avantage = modele.get_avantage_domicile()
+    avantage_univ = modele.get_avantage_domicile()   # index UNIVERSEL
 
     # 4. Isolation stricte des 20 équipes de la saison actuelle pour la base de simulation
     c_actuel = ChargeurDonnees("2025-2026.csv")
@@ -121,12 +121,14 @@ def executer_calcul_modele(p1, p2, p3, p4, p5, p6, p7, p8):
 
     index_simu = {nom: i for i, nom in enumerate(equipes_actuelles)}
     forces_simu = {}
+    avantage_simu = {}   # CORRECTION : on réindexe AUSSI l'avantage sur 0-19
     for nom in equipes_actuelles:
-        idx_u = index_univ[nom]
-        idx_s = index_simu[nom]
+        idx_u = index_univ[nom]      # numéro dans l'index universel
+        idx_s = index_simu[nom]      # numéro dans l'index des 20 équipes
         forces_simu[idx_s] = forces_univ[idx_u]
+        avantage_simu[idx_s] = avantage_univ[idx_u]   # CORRECTION : même réindexation que les forces
 
-    return forces_simu, avantage, index_simu
+    return forces_simu, avantage_simu, index_simu
 
 
 # --- DÉFINITION DES MOUVEMENTS (Relégués / Promus) ---
