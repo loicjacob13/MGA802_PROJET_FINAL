@@ -320,7 +320,7 @@ if __name__ == "__main__":
             "Nombre de simulations",
             f"Saison choisie : {saison_selectionnee}\n\nCombien de simulations voulez-vous effectuer ?",
             initialvalue=500,
-            minvalue=1  # Interdit automatiquement les nombres < 1
+            minvalue=1  #Interdit automatiquement les nombres < 1
         )
 
         root_cache.destroy()
