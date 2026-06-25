@@ -1,5 +1,6 @@
 """
 simuler_saison_choisie.py — Choisir une saison et la simuler automatiquement.
+Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
 
 PRINCIPE :
 L'utilisateur choisit une saison. On cherche d'abord le meilleur trio de pondération
@@ -9,9 +10,11 @@ simule. Si la saison a déjà été jouée, on compare au classement réel.
 """
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from donnees import ChargeurDonnees
 from modele import ModelePoisson
 from simulateur import Simulateur
+from visualisation import Visualiseur
 from forces_promus import forces_pour_position_cible
 from recherche_ponderation import trouver_meilleur_trio
 
@@ -30,43 +33,60 @@ SAISONS = {
         "precedentes": ["2018-2019.csv", "2019-2020.csv", "2020-2021.csv"],
         "validation": "2020-2021.csv",
         "train_valid": ["2017-2018.csv", "2018-2019.csv", "2019-2020.csv"],
+        "promus": ["Norwich", "Watford", "Brentford"],   # 1er, 2e, 3e promu
     },
     "2022-2023": {
         "csv": "2022-2023.csv",
         "precedentes": ["2019-2020.csv", "2020-2021.csv", "2021-2022.csv"],
         "validation": "2021-2022.csv",
         "train_valid": ["2018-2019.csv", "2019-2020.csv", "2020-2021.csv"],
+        "promus": ["Fulham", "Bournemouth", "Nott'm Forest"],
     },
     "2023-2024": {
         "csv": "2023-2024.csv",
         "precedentes": ["2020-2021.csv", "2021-2022.csv", "2022-2023.csv"],
         "validation": "2022-2023.csv",
         "train_valid": ["2019-2020.csv", "2020-2021.csv", "2021-2022.csv"],
+        "promus": ["Burnley", "Sheffield United", "Luton"],
     },
     "2024-2025": {
         "csv": "2024-2025.csv",
         "precedentes": ["2021-2022.csv", "2022-2023.csv", "2023-2024.csv"],
         "validation": "2023-2024.csv",
         "train_valid": ["2020-2021.csv", "2021-2022.csv", "2022-2023.csv"],
+        "promus": ["Leicester", "Ipswich", "Southampton"],
     },
     "2025-2026": {
         "csv": "2025-2026.csv",
         "precedentes": ["2022-2023.csv", "2023-2024.csv", "2024-2025.csv"],
         "validation": "2024-2025.csv",
         "train_valid": ["2021-2022.csv", "2022-2023.csv", "2023-2024.csv"],
+        "promus": ["Leeds", "Burnley", "Sunderland"],
     },
     "2026-2027": {
         "csv": None,    # saison future : pas encore jouée
         "precedentes": ["2023-2024.csv", "2024-2025.csv", "2025-2026.csv"],
         "validation": "2025-2026.csv",
         "train_valid": ["2022-2023.csv", "2023-2024.csv", "2024-2025.csv"],
-        "promus_futurs": ["Coventry", "Ipswich", "Millwall"],
+        "promus": ["Coventry", "Ipswich", "Millwall"],
         "relegues_futurs": ["West Ham", "Burnley", "Wolves"],
     },
 }
 
 # Positions cibles des 3 promus, identiques pour chaque saison
 POSITIONS_PROMUS = [15.0, 16.9, 17.4]
+
+# Sigle court de chaque équipe (pour faciliter la saisie de l'utilisateur)
+SIGLES = {
+    "Arsenal": "ARS", "Aston Villa": "AVL", "Bournemouth": "BOU", "Brentford": "BRE",
+    "Brighton": "BHA", "Burnley": "BUR", "Chelsea": "CHE", "Crystal Palace": "CRY",
+    "Everton": "EVE", "Fulham": "FUL", "Ipswich": "IPS", "Leeds": "LEE",
+    "Leicester": "LEI", "Liverpool": "LIV", "Luton": "LUT", "Man City": "MCI",
+    "Man United": "MUN", "Newcastle": "NEW", "Norwich": "NOR", "Nott'm Forest": "NFO",
+    "Sheffield United": "SHU", "Southampton": "SOU", "Sunderland": "SUN",
+    "Tottenham": "TOT", "Watford": "WAT", "West Ham": "WHU", "Wolves": "WOL",
+    "Coventry": "COV", "Millwall": "MIL",
+}
 
 
 # ----------------------------------------------------------------------
@@ -177,25 +197,18 @@ def simuler_saison(nom_saison, n_simulations=500):
     forces_train = modele.get_forces()
     avantage_train = modele.get_avantage_domicile()
 
-    # --- ÉTAPE B : simulation de base pour calibrer les promus ---
-    sim_base = Simulateur(forces_train, avantage_train, index_train)
-    resultats_base = sim_base.simuler_monte_carlo(n_simulations)
+    # --- ÉTAPE B : déterminer les équipes de la saison cible ---
+    # Les promus sont déclarés manuellement (dans l'ordre 1er, 2e, 3e promu).
+    promus = info["promus"]
 
-    # --- ÉTAPE C : déterminer les équipes de la saison cible ---
     if info["csv"] is not None:
-        # saison déjà jouée : on lit son CSV
+        # saison déjà jouée : on lit son CSV pour avoir la liste exacte des 20 équipes
         c_cible = ChargeurDonnees(info["csv"]); c_cible.nettoyer()
         equipes_cible = sorted(c_cible.get_equipes())
-        # un promu est une équipe de la saison cible absente de l'entraînement
-        promus = []
-        for nom in equipes_cible:
-            if nom not in index_train:
-                promus.append(nom)
     else:
         # saison future : équipes récentes - relégués + promus connus
         c_recente = ChargeurDonnees(fichiers_train[2]); c_recente.nettoyer()
         relegues = info["relegues_futurs"]
-        promus = info["promus_futurs"]
         equipes_cible = []
         for nom in c_recente.get_equipes():
             if nom not in relegues:
@@ -203,40 +216,48 @@ def simuler_saison(nom_saison, n_simulations=500):
         equipes_cible = sorted(equipes_cible + promus)
 
     print(f"Saison {nom_saison} -- {len(equipes_cible)} équipes")
-    print(f"Promus détectés : {promus}")
+    print(f"Promus (manuels) : {promus}")
 
-    # --- ÉTAPE D : construire forces / avantage / index de la saison cible ---
+    # --- ÉTAPE C : construire forces / avantage / index de la saison cible ---
     forces_saison = {}
     avantage_saison = {}
     index_saison = {}
     numero = 0
     for nom in equipes_cible:
-        if nom in index_train:
-            # équipe connue : on copie ses forces apprises
-            idx_t = index_train[nom]
-            forces_saison[numero] = forces_train[idx_t]
-            avantage_saison[numero] = avantage_train[idx_t]
-        else:
-            # équipe promue : on approxime via sa position cible
+        # une équipe est traitée comme promue si elle est dans la liste manuelle,
+        # MÊME si elle a déjà joué en PL avant (cas des équipes "yo-yo")
+        if nom in promus:
+            # équipe promue : on approxime via sa position cible.
+            # La fonction entraîne le modèle saison par saison (20 équipes propres),
+            # trouve l'équipe la plus proche de la cible dans chaque saison, et moyenne.
             rang_promu = promus.index(nom)             # 0, 1 ou 2
             if rang_promu > 2:
                 rang_promu = 2
             cible = POSITIONS_PROMUS[rang_promu]
-            att, defe = forces_pour_position_cible(cible, resultats_base, forces_train, index_train)
+            att, defe, av = forces_pour_position_cible(cible, fichiers_train, n_simulations)
             forces_saison[numero] = (att, defe)
-            # un promu n'a pas d'avantage domicile connu -> on met la moyenne des autres
-            avantage_saison[numero] = np.mean(list(avantage_train.values()))
+            avantage_saison[numero] = av
+        elif nom in index_train:
+            # équipe connue (maintenue) : on copie ses forces apprises
+            idx_t = index_train[nom]
+            forces_saison[numero] = forces_train[idx_t]
+            avantage_saison[numero] = avantage_train[idx_t]
+        else:
+            # cas rare : équipe ni promue ni connue -> on la traite comme un promu moyen
+            att, defe, av = forces_pour_position_cible(17.0, fichiers_train, n_simulations)
+            forces_saison[numero] = (att, defe)
+            avantage_saison[numero] = av
         index_saison[nom] = numero
         numero += 1
 
-    # --- ÉTAPE E : simulation finale de la saison cible ---
+    # --- ÉTAPE D : simulation finale de la saison cible ---
     sim = Simulateur(forces_saison, avantage_saison, index_saison)
     resultats = sim.simuler_monte_carlo(n_simulations)
 
     print("\n--- CLASSEMENT SIMULÉ ---")
     print(resultats.to_string())
 
-    # --- ÉTAPE F : comparaison au réel si la saison a déjà été jouée ---
+    # --- ÉTAPE E : comparaison au réel si la saison a déjà été jouée ---
     if info["csv"] is not None:
         n_cible = len(index_saison)
         positions_reelles = classement_reel(c_cible, index_saison, n_cible)
@@ -262,7 +283,8 @@ def simuler_saison(nom_saison, n_simulations=500):
     else:
         print("\n(Saison future : pas de classement réel pour comparer.)")
 
-    return resultats
+    # on renvoie aussi le simulateur et l'index pour pouvoir tracer les graphiques
+    return resultats, sim, index_saison
 
 
 # ----------------------------------------------------------------------
@@ -299,36 +321,52 @@ if __name__ == "__main__":
         tk.Button(fenetre, text=f"{nom} {etat}", font=("Arial", 10),
                   command=lambda s=nom: choisir(s)).pack(pady=5, padx=40, fill="x")
 
-    # 4. Affichage de la fenêtre (le programme se met en pause ici en attendant un clic)
+# 4. Affichage de la fenêtre (pause ici en attendant un clic)
     fenetre.mainloop()
-
-    # On récupère la valeur sur laquelle l'utilisateur a cliqué
     saison_selectionnee = choix_saison.get()
-
-    # On détruit la fenêtre des boutons pour nettoyer l'écran
     fenetre.destroy()
 
-    # 5. Si l'utilisateur a bien cliqué sur un bouton (et n'a pas juste fermé avec la croix)
+    # 5. Si l'utilisateur a cliqué sur une saison
     if saison_selectionnee:
-
-        # On crée une fenêtre "invisible" juste pour servir de support à la question suivante
         root_cache = tk.Tk()
         root_cache.withdraw()
-
-        # askinteger génère un pop-up sécurisé (try/except intégré pour exiger un entier)
         nb_simulations = simpledialog.askinteger(
             "Nombre de simulations",
             f"Saison choisie : {saison_selectionnee}\n\nCombien de simulations voulez-vous effectuer ?",
             initialvalue=500,
-            minvalue=1  #Interdit automatiquement les nombres < 1
+            minvalue=1
         )
-
         root_cache.destroy()
 
-        # Si l'utilisateur a saisi un nombre et cliqué sur "OK"
         if nb_simulations is not None:
             print(f"\nLancement de la simulation pour {saison_selectionnee} ({nb_simulations} simulations)...")
-            simuler_saison(saison_selectionnee, n_simulations=nb_simulations)
+            # On lance la simulation : elle renvoie les résultats, le simulateur et l'index
+            resultats, sim, index_saison = simuler_saison(saison_selectionnee, n_simulations=nb_simulations)
+
+            # ------------------------------------------------------------------
+            # GRAPHIQUES (on réutilise la classe Visualiseur)
+            # ------------------------------------------------------------------
+            # L'utilisateur DOIT saisir un sigle officiel (le nom complet est refusé).
+            print("\nÉquipes de cette saison :")
+            for nom in sorted(index_saison.keys()):
+                sigle = SIGLES[nom]
+                print(f"  {sigle:<5} = {nom}")
+
+            sigle_vers_nom = {}
+            for nom in index_saison:
+                sigle_vers_nom[SIGLES[nom]] = nom
+
+            saisie = input("\nQuelle équipe détailler ? (sigle officiel, ex: ARS) : ").strip().upper()
+            while saisie not in sigle_vers_nom:
+                print("Sigle invalide. Entrez un sigle de la liste ci-dessus (ex: ARS).")
+                saisie = input("Sigle : ").strip().upper()
+            equipe = sigle_vers_nom[saisie]
+
+            visu = Visualiseur(resultats)
+            visu.graphique_probabilites_titre()
+            visu.graphique_classement_moyen()
+            visu.graphique_distribution_points(equipe, simulateur=sim)
+            plt.show()
         else:
             print("\nSimulation annulée au moment du choix des simulations.")
     else:
