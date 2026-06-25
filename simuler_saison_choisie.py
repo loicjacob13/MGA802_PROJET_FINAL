@@ -266,19 +266,70 @@ def simuler_saison(nom_saison, n_simulations=500):
 
 
 # ----------------------------------------------------------------------
-# 4. PROGRAMME PRINCIPAL : DEMANDE À L'UTILISATEUR
+# 4. PROGRAMME PRINCIPAL : DEMANDE À L'UTILISATEUR AVEC POP-UP DE SELECTION
 # ----------------------------------------------------------------------
+
 if __name__ == "__main__":
-    print("Saisons disponibles :")
+    import tkinter as tk
+    from tkinter import simpledialog
+
+    # 1. Création de la fenêtre principale pour les boutons
+    fenetre = tk.Tk()
+    fenetre.title("Choix de la saison")
+    fenetre.geometry("350x400")
+
+    # Variable Tkinter pour stocker le nom de la saison cliquée
+    choix_saison = tk.StringVar()
+
+
+    def choisir(saison):
+        """Fonction déclenchée quand on clique sur un bouton"""
+        choix_saison.set(saison)
+        fenetre.quit()  # Arrête l'attente de la fenêtre
+
+
+    # 2. Ajout du texte en haut de la fenêtre
+    tk.Label(fenetre, text="Sélectionnez la saison à simuler :", font=("Arial", 12, "bold")).pack(pady=20)
+
+    # 3. Création d'un bouton cliquable pour chaque saison
     for nom in SAISONS:
-        if SAISONS[nom]["csv"] is None:
-            print(f"  - {nom} (future)")
+        etat = "(future)" if SAISONS[nom]["csv"] is None else "(déjà jouée)"
+
+        # Le 'lambda s=nom' permet d'associer la bonne saison à chaque bouton
+        tk.Button(fenetre, text=f"{nom} {etat}", font=("Arial", 10),
+                  command=lambda s=nom: choisir(s)).pack(pady=5, padx=40, fill="x")
+
+    # 4. Affichage de la fenêtre (le programme se met en pause ici en attendant un clic)
+    fenetre.mainloop()
+
+    # On récupère la valeur sur laquelle l'utilisateur a cliqué
+    saison_selectionnee = choix_saison.get()
+
+    # On détruit la fenêtre des boutons pour nettoyer l'écran
+    fenetre.destroy()
+
+    # 5. Si l'utilisateur a bien cliqué sur un bouton (et n'a pas juste fermé avec la croix)
+    if saison_selectionnee:
+
+        # On crée une fenêtre "invisible" juste pour servir de support à la question suivante
+        root_cache = tk.Tk()
+        root_cache.withdraw()
+
+        # askinteger génère un pop-up sécurisé (try/except intégré pour exiger un entier)
+        nb_simulations = simpledialog.askinteger(
+            "Nombre de simulations",
+            f"Saison choisie : {saison_selectionnee}\n\nCombien de simulations voulez-vous effectuer ?",
+            initialvalue=500,
+            minvalue=1  #Interdit automatiquement les nombres < 1
+        )
+
+        root_cache.destroy()
+
+        # Si l'utilisateur a saisi un nombre et cliqué sur "OK"
+        if nb_simulations is not None:
+            print(f"\nLancement de la simulation pour {saison_selectionnee} ({nb_simulations} simulations)...")
+            simuler_saison(saison_selectionnee, n_simulations=nb_simulations)
         else:
-            print(f"  - {nom} (déjà jouée)")
-
-    choix = input("\nQuelle saison voulez-vous simuler ? (ex: 2023-2024) : ").strip()
-    while choix not in SAISONS:
-        print("Saison invalide. Choisissez parmi la liste ci-dessus.")
-        choix = input("Quelle saison ? : ").strip()
-
-    simuler_saison(choix, n_simulations=500)
+            print("\nSimulation annulée au moment du choix des simulations.")
+    else:
+        print("\nSimulation annulée : aucune saison sélectionnée.")
