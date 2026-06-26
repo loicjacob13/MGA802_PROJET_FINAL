@@ -1,172 +1,157 @@
 """
-generer_documentation.py — Script principal de génération de la documentation Sphinx
-Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
+generer_documentation.py — Script de génération de la documentation Sphinx
+Auteurs : Fabien, Loïc, Guillaume — Projet MGA802 Groupe 2
 
 UTILISATION :
-    Depuis la RACINE du projet (là où se trouvent donnees/, simulation/, etc.) :
-
+    Depuis le terminal :
         python generer_documentation.py
 
-    La documentation HTML sera générée dans :
-        docs/build/html/index.html
-
-PRINCIPE :
-    1. Sphinx lit conf.py pour connaître le projet et les extensions
-    2. sphinx-apidoc génère un fichier .rst par module Python
-    3. sphinx-build -b html construit les pages HTML depuis les .rst
-    4. autodoc importe chaque module et lit les __doc__ de chaque fonction/classe
+DESCRIPTION :
+    Ce script automatise la création de la documentation du projet.
+    1. Vérifie la présence de Sphinx et l'installe si nécessaire.
+    2. Crée un fichier de configuration (conf.py) s'il est manquant.
+    3. Scanne les modules Python pour générer les sources (.rst).
+    4. Compile le tout en un site web HTML.
 """
 
 import os
 import sys
 import subprocess
 
+# -----------------------------------------------------------------------
+# 1. Configuration des chemins
+# -----------------------------------------------------------------------
+# On identifie la racine du projet, que le script soit lancé depuis "simulation" ou la racine
+dossier_actuel = os.path.dirname(os.path.abspath(__file__))
+
+if os.path.basename(dossier_actuel) == "simulation":
+    racine_projet = os.path.dirname(dossier_actuel)
+else:
+    racine_projet = dossier_actuel
+
+dossier_docs = os.path.join(racine_projet, "docs")
+source_docs = os.path.join(dossier_docs, "source")
+build_html = os.path.join(dossier_docs, "build", "html")
+
+
+def afficher_etape(titre):
+    """Affiche une séparation visuelle claire pour le terminal."""
+    print(f"\n{'-' * 60}")
+    print(f" {titre}")
+    print(f"{'-' * 60}")
+
 
 # -----------------------------------------------------------------------
-# 1. Chemins
+# 2. Vérification et installation de Sphinx
 # -----------------------------------------------------------------------
-RACINE_PROJET = os.path.dirname(os.path.abspath(__file__))
-DOSSIER_DOCS  = os.path.join(RACINE_PROJET, "docs")
-SOURCE        = os.path.join(DOSSIER_DOCS, "source")
-BUILD_HTML    = os.path.join(DOSSIER_DOCS, "build", "html")
-
-
-def afficher(message):
-    """Affiche un message formaté dans le terminal."""
-    print(f"\n{'='*60}")
-    print(f"  {message}")
-    print(f"{'='*60}")
-
-
-# -----------------------------------------------------------------------
-# 2. Vérification de Sphinx
-# -----------------------------------------------------------------------
-afficher("ÉTAPE 1 — Vérification de Sphinx")
+afficher_etape("ÉTAPE 1 — Vérification des dépendances (Sphinx)")
 try:
     resultat = subprocess.run(
         [sys.executable, "-m", "sphinx", "--version"],
-        capture_output=True, text=True
+        capture_output=True, text=True, check=True
     )
-    print(f"  Sphinx trouvé : {resultat.stdout.strip()}")
-except Exception:
-    print("  Sphinx non trouvé. Installation en cours...")
+    print(f"  Sphinx détecté : {resultat.stdout.strip()}")
+except subprocess.CalledProcessError:
+    print("  Sphinx introuvable. Installation en cours via pip...")
     subprocess.run([sys.executable, "-m", "pip", "install", "sphinx"], check=True)
-    print("  Sphinx installé.")
-
+    print("  Installation de Sphinx terminée.")
 
 # -----------------------------------------------------------------------
-# 3. sphinx-apidoc : génère un .rst par module Python
-#    "Il nous faut un fichier .rst par fichier .py dans notre code"
-#    "La commande sphinx-apidoc les génère automatiquement"
-#    Commande : sphinx-apidoc -o source .
+# 3. Vérification du fichier de configuration (conf.py)
 # -----------------------------------------------------------------------
-afficher("ÉTAPE 2 — Génération des fichiers .rst (sphinx-apidoc)")
+fichier_conf = os.path.join(source_docs, "conf.py")
 
-# Dossiers à documenter
-modules_a_documenter = [
-    os.path.join(RACINE_PROJET, "donnees"),
-    os.path.join(RACINE_PROJET, "simulation"),
-    os.path.join(RACINE_PROJET, "visualisation"),
-    os.path.join(RACINE_PROJET, "controle_input.py"),
+if not os.path.exists(fichier_conf):
+    print("\n  [Info] Fichier conf.py manquant. Génération automatique...")
+    os.makedirs(source_docs, exist_ok=True)
+
+    with open(fichier_conf, "w", encoding="utf-8") as f:
+        f.write("# Configuration générée automatiquement\n")
+        f.write("import os\nimport sys\n")
+        f.write("sys.path.insert(0, os.path.abspath('../..'))\n\n")
+
+        f.write("project = 'Projet MGA802 - Simulation PL'\n")
+        f.write("copyright = '2026, Fabien, Loïc, Guillaume'\n")
+        f.write("author = 'Fabien, Loïc, Guillaume'\n\n")
+
+        f.write("extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.viewcode']\n")
+        f.write("html_theme = 'alabaster'\n")
+    print("  Fichier conf.py créé avec les paramètres par défaut.")
+
+# -----------------------------------------------------------------------
+# 4. Génération des fichiers sources (.rst)
+# -----------------------------------------------------------------------
+afficher_etape("ÉTAPE 2 — Analyse du projet (sphinx-apidoc)")
+
+# Fichiers et dossiers à exclure de la documentation
+fichiers_a_ignorer = [
+    "main_OLD.py", "main_streamlit.py", "main_NEW.py",
+    "grille_test.py", "test_donnees.py", "requirement.py",
+    "visualisation_streamlit.py", ".venv", "docs", "tests"
 ]
+exclusions = [os.path.join(racine_projet, exc) for exc in fichiers_a_ignorer]
 
-# Fichiers / dossiers à exclure de la génération automatique
-exclusions = [
-    os.path.join(RACINE_PROJET, "main_OLD.py"),
-    os.path.join(RACINE_PROJET, "main_streamlit.py"),
-    os.path.join(RACINE_PROJET, "main_NEW.py"),
-    os.path.join(RACINE_PROJET, "grille_test.py"),
-    os.path.join(RACINE_PROJET, "test_donnees.py"),
-    os.path.join(RACINE_PROJET, "requirement.py"),
-    os.path.join(RACINE_PROJET, "visualisation_streamlit.py"),
-]
+commande_apidoc = [
+                      sys.executable, "-m", "sphinx.ext.apidoc",
+                      "-o", source_docs,
+                      "-f",  # Forcer l'écrasement des anciens fichiers
+                      "-e",  # Un fichier .rst par module
+                      "-M",  # Mettre les modules parents en premier
+                      racine_projet
+                  ] + exclusions
 
-# On lance sphinx-apidoc pour chaque module séparément
-# -o SOURCE  : dossier de sortie des .rst
-# -f         : force l'écrasement des .rst existants
-# -e         : un fichier .rst par module (recommandé)
-# -M         : met le module parent en premier
-for module in modules_a_documenter:
-    if not os.path.exists(module):
-        print(f" Module non trouvé (ignoré) : {module}")
-        continue
-
-    commande = [
-        sys.executable, "-m", "sphinx.ext.apidoc",
-        "-o", SOURCE,          # dossier de sortie : docs/source/
-        "-f",                  # force l'écrasement
-        "-e",                  # un .rst par module
-        "-M",                  # module parent en premier
-        module,                # chemin du module à documenter
-    ] + exclusions
-
-    print(f"  sphinx-apidoc → {os.path.basename(module)}")
-    resultat = subprocess.run(commande, capture_output=True, text=True, cwd=RACINE_PROJET)
-    if resultat.returncode != 0:
-        print(f" Avertissement : {resultat.stderr[:200]}")
-    else:
-        print(f" Fichiers .rst générés")
-
+print("  Génération des fichiers .rst en cours...")
+subprocess.run(commande_apidoc, capture_output=True, text=True, cwd=racine_projet)
+print("  Fichiers .rst générés avec succès.")
 
 # -----------------------------------------------------------------------
-# 4. sphinx-build : construit la documentation HTML
-#    Équivalent de : make html
+# 5. Compilation de la documentation HTML
 # -----------------------------------------------------------------------
-afficher("ÉTAPE 3 — Construction de la documentation HTML (sphinx-build)")
+afficher_etape("ÉTAPE 3 — Construction de la documentation (sphinx-build)")
 
 commande_build = [
     sys.executable, "-m", "sphinx",
-    "-b", "html",              # format de sortie : HTML
-    SOURCE,                    # dossier source (contient conf.py)
-    BUILD_HTML,                # dossier de destination
-    "-E",                      # force la reconstruction complète
-    "-W", "--keep-going",      # traite les warnings mais continue
+    "-b", "html",
+    source_docs,
+    build_html,
+    "-q",  # Mode silencieux pour la sortie standard
+    "-E",  # Forcer une reconstruction complète
 ]
 
-print(f"  Source : {SOURCE}")
-print(f"  Sortie : {BUILD_HTML}")
-print()
-
+print("  Compilation des pages HTML...")
 resultat_build = subprocess.run(
     commande_build,
     capture_output=True,
     text=True,
-    cwd=RACINE_PROJET,
-    env={**os.environ, "PYTHONPATH": RACINE_PROJET},  # pour que autodoc trouve les modules
+    cwd=racine_projet,
+    env={**os.environ, "PYTHONPATH": racine_projet}
 )
 
-# Afficher la sortie de Sphinx
-if resultat_build.stdout:
-    for ligne in resultat_build.stdout.splitlines():
-        if ligne.strip():
-            print(f"  {ligne}")
-
+# Affichage des avertissements pertinents
 if resultat_build.stderr:
     for ligne in resultat_build.stderr.splitlines():
         if ligne.strip() and not ligne.startswith("WARNING: autodoc"):
-            print(f"  ⚠  {ligne}")
-
+            print(f"  Avertissement: {ligne}")
 
 # -----------------------------------------------------------------------
-# 5. Résumé final
+# 6. Conclusion et ouverture
 # -----------------------------------------------------------------------
-afficher("RÉSULTAT")
+afficher_etape("RÉSULTAT")
 
-index_html = os.path.join(BUILD_HTML, "index.html")
-if os.path.exists(index_html):
-    print(f" Documentation générée avec succès")
-    print(f"\n  Ouvrir dans un navigateur :")
-    print(f"  {index_html}")
-    print()
-    print("  Ou depuis le terminal :")
+index_html = os.path.join(build_html, "index.html")
+
+if os.path.exists(index_html) and resultat_build.returncode == 0:
+    print("  Documentation générée avec succès.")
+    print(f"\n  Chemin du fichier d'index :")
+    print(f"  {index_html}\n")
+
+    # Commande suggérée pour ouvrir directement
     if sys.platform == "darwin":
-        print(f"  open '{index_html}'")
+        print(f"  Commande pour ouvrir : open '{index_html}'")
     elif sys.platform == "win32":
-        print(f"  start '{index_html}'")
-    else:
-        print(f"  xdg-open '{index_html}'")
+        print(f"  Commande pour ouvrir : start '{index_html}'")
 else:
-    print(" La génération a échoué.")
-    print(f"  Code de retour : {resultat_build.returncode}")
-    print("  Vérifiez les messages d'erreur ci-dessus.")
+    print("  La génération a échoué.")
+    print(f"  Code de retour de Sphinx : {resultat_build.returncode}")
+    print("  Vérifiez les avertissements ci-dessus pour plus de détails.")
     sys.exit(1)
