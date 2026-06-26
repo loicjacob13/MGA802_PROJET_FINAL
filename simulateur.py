@@ -47,10 +47,10 @@ class Simulateur:
         return buts_dom, buts_ext
 
     # ------------------------------------------------------------------
-    # ÉTAPE 2 — Simuler une saison complète (380 matchs)
+    # ÉTAPE 2 — Simuler une saison complète (380 matchs)-
     # ------------------------------------------------------------------
 
-    def simuler_saison(self) -> pd.DataFrame:
+    '''def simuler_saison(self) -> pd.DataFrame:
         """Joue les 380 matchs d'une saison et retourne le classement final."""
         # --- Initialisation des compteurs (tableaux NumPy, plus rapide que des listes) ---
         points    = np.zeros(self.n_equipes, dtype=int)   # points cumulés
@@ -100,6 +100,91 @@ class Simulateur:
         ).reset_index(drop=True)
 
         # La position dans le classement va de 1 (champion) à 20 (dernier)
+        classement['position'] = classement.index + 1
+
+        return classement'''
+
+    def simuler_saison(self) -> pd.DataFrame:
+        """Joue les 380 matchs d'une saison et retourne le classement final."""
+        points = np.zeros(self.n_equipes, dtype=int)
+        diff_buts = np.zeros(self.n_equipes, dtype=int)
+
+        calendrier = []
+        for dom in range(self.n_equipes):
+            for ext in range(self.n_equipes):
+                if dom != ext:
+                    calendrier.append((dom, ext))
+
+        calendrier = np.array(calendrier)
+        ordre = self.rng.permutation(len(calendrier))
+        calendrier = calendrier[ordre]
+
+        # On suit le numéro de journée pour activer le moral en fin de saison
+        n_matchs_par_journee = self.n_equipes // 2  # 10 matchs par journée (20 équipes / 2)
+        journee_actuelle = 1
+
+        # Classement courant (mis à jour au fil des journées pour le moral)
+        classement_courant = pd.DataFrame({
+            'equipe': [self.noms_equipes[i] for i in range(self.n_equipes)],
+            'points': points.copy(),
+            'position': list(range(1, self.n_equipes + 1)),
+        })
+
+        for i, (dom, ext) in enumerate(calendrier):
+            dom = int(dom)
+            ext = int(ext)
+
+            # Mise à jour de la journée tous les n_matchs_par_journee matchs
+            journee_actuelle = i // n_matchs_par_journee + 1
+
+            # Calcul du lambda de base
+            lam_base = np.exp(
+                self.attaques[dom] - self.defenses[ext] + self.avantages[dom]
+            )
+            mu_base = np.exp(
+                self.attaques[ext] - self.defenses[dom]
+            )
+
+            # Application du moral (actif uniquement journée >= 35)
+            lam = self.appliquer_moral(lam_base, dom, journee_actuelle, classement_courant)
+            mu = self.appliquer_moral(mu_base, ext, journee_actuelle, classement_courant)
+
+            # Tirage Poisson avec les lambda ajustés
+            buts_dom = int(self.rng.poisson(lam))
+            buts_ext = int(self.rng.poisson(mu))
+
+            diff = buts_dom - buts_ext
+            diff_buts[dom] += diff
+            diff_buts[ext] -= diff
+
+            if buts_dom > buts_ext:
+                points[dom] += 3
+            elif buts_dom == buts_ext:
+                points[dom] += 1
+                points[ext] += 1
+            else:
+                points[ext] += 3
+
+            # Mise à jour du classement courant à chaque fin de journée
+            if (i + 1) % n_matchs_par_journee == 0:
+                df_temp = pd.DataFrame({
+                    'equipe': [self.noms_equipes[j] for j in range(self.n_equipes)],
+                    'points': points.copy(),
+                })
+                df_temp = df_temp.sort_values('points', ascending=False).reset_index(drop=True)
+                df_temp['position'] = df_temp.index + 1
+                classement_courant = df_temp  # on met à jour le classement pour le moral
+
+        # Construction du classement final
+        classement = pd.DataFrame({
+            'equipe': [self.noms_equipes[i] for i in range(self.n_equipes)],
+            'points': points,
+            'diff_buts': diff_buts,
+        })
+        classement = classement.sort_values(
+            by=['points', 'diff_buts'],
+            ascending=[False, False]
+        ).reset_index(drop=True)
         classement['position'] = classement.index + 1
 
         return classement
