@@ -1,3 +1,7 @@
+"""visualisation_streamlit.py — Graphiques Plotly pour l'interface Streamlit.
+Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
+"""
+
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd

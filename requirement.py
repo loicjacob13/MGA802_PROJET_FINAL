@@ -1,6 +1,0 @@
-numpy >= 1.24
-pandas >= 2.0
-matplotlib >= 3.7
-scipy >= 1.10
-pytest >= 7.0
-streamlit >= 1.30

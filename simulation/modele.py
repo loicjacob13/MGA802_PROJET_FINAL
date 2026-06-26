@@ -21,8 +21,7 @@ class ModelePoisson:
         """
         self.n_equipes = n_equipes
         self.params = np.zeros(3 * n_equipes)
-        #le vecteur params consiste à appliquer une donnée force d'attaque et une donnée force défense et 1 avnatage domicile qui sera commun à tous
-        #ici, il y a 3 équipes didérentes donc le vecteur params prendra juste 7 termes car le facteur de jouer à domicile est jugé uniforme à tous
+        # params = [attaque_0..N, defense_0..N, avantage_0..N] — vecteur plat pour scipy
         self.noms_equipes = None
         self.index_equipes = None
         self.matchs = None
@@ -53,9 +52,7 @@ class ModelePoisson:
         buts_dom = matchs["buts_dom"].to_numpy()
         buts_ext = matchs["buts_ext"].to_numpy()
 
-#mtn il faut empiler ces 4 colonnes cote à cote
-# Chaque ligne = [idx_dom, idx_ext, buts_dom, buts_ext]
-        self.matchs = np.column_stack([idx_dom, idx_ext, buts_dom, buts_ext]).astype(int)
+# Chaque ligne = [idx_dom, idx_ext, buts_dom, buts_ext]        self.matchs = np.column_stack([idx_dom, idx_ext, buts_dom, buts_ext]).astype(int)
         return self.matchs #tableau au coeurr du problème pour entrainer le modèle
 
 
@@ -73,8 +70,6 @@ class ModelePoisson:
         defenses=params[n:2*n]
         avantage=params[2*n:3*n]
         return attaques, defenses, avantage
-
-    #fonction qui calcule les buts attendus
 
     def calculer_lambda_mu(self, idx_dom, idx_ext):
         """
