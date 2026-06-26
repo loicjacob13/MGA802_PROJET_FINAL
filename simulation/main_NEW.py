@@ -95,8 +95,14 @@ SIGLES = {
 # ----------------------------------------------------------------------
 def matchs_avec_index(chargeur, index):
     """
-    Reconstruit la liste des matchs [idx_dom, idx_ext, buts_dom, buts_ext]
-    en remplaçant les noms d'équipes par leur numéro dans 'index'.
+    Reconstruit la liste des matchs en remplaçant les noms d'équipes par leur numéro.
+
+    :param chargeur: instance ChargeurDonnees déjà chargée.
+    :type chargeur: ChargeurDonnees
+    :param index: correspondance {nom_equipe: numero}.
+    :type index: dict
+    :return: tableau des matchs au format [idx_dom, idx_ext, buts_dom, buts_ext].
+    :rtype: numpy.ndarray
     """
     brutes = chargeur.donnees[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']].to_numpy()
     lignes = []
@@ -110,7 +116,18 @@ def matchs_avec_index(chargeur, index):
 
 
 def classement_reel(chargeur, index, n):
-    """Calcule le vrai classement final (règle 3 points victoire / 1 nul / 0 défaite)."""
+    """
+    Calcule le vrai classement final (3 points victoire / 1 nul / 0 défaite).
+
+    :param chargeur: instance ChargeurDonnees déjà chargée.
+    :type chargeur: ChargeurDonnees
+    :param index: correspondance {nom_equipe: numero}.
+    :type index: dict
+    :param n: nombre d'équipes.
+    :type n: int
+    :return: tableau où positions[numero_equipe] donne la position finale (1 = premier).
+    :rtype: numpy.ndarray
+    """
     matchs = matchs_avec_index(chargeur, index)
     points = np.zeros(n, dtype=int)
 
@@ -143,7 +160,13 @@ def classement_reel(chargeur, index, n):
 def construire_index(liste_chargeurs):
     """
     Construit un dictionnaire {nom: numéro} commun à plusieurs saisons.
-    On parcourt toutes les équipes et on les numérote par ordre alphabétique.
+
+    Les équipes sont numérotées par ordre alphabétique (reproductible).
+
+    :param liste_chargeurs: liste d'instances ChargeurDonnees déjà nettoyées.
+    :type liste_chargeurs: list
+    :return: dictionnaire {nom_equipe: numero}.
+    :rtype: dict
     """
     noms = []
     for chargeur in liste_chargeurs:
@@ -157,11 +180,19 @@ def construire_index(liste_chargeurs):
     return index
 
 
-# ----------------------------------------------------------------------
-# 3. FONCTION PRINCIPALE : SIMULER UNE SAISON
-# ----------------------------------------------------------------------
 def simuler_saison(nom_saison, n_simulations=500):
-    """Calibre les poids, entraîne, approxime les promus, simule et compare au réel."""
+    """
+    Calibre les poids, entraîne, approxime les promus, simule et compare au réel.
+
+    :param nom_saison: saison à simuler (clé de SAISONS, ex. "2023-2024").
+    :type nom_saison: str
+    :param n_simulations: nombre de simulations Monte-Carlo.
+    :type n_simulations: int
+    :return: tuple (resultats, sim, index_saison) où resultats est le classement
+        simulé (DataFrame), sim le Simulateur utilisé et index_saison le dict {nom: index}.
+    :rtype: tuple
+    """
+
     info = SAISONS[nom_saison]
     fichiers_train = info["precedentes"]
 

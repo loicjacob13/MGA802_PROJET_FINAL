@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>simulation.forces_promus &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Recherche" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de simulation.forces_promus</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">forces_promus.py — Approxime les forces des équipes promues.</span>
+
+<span class="sd">PRINCIPE :</span>
+<span class="sd">Une équipe promue n&#39;a pas joué en Premier League, donc le modèle ne connaît pas ses</span>
+<span class="sd">forces. On les approxime à partir des positions cibles historiques (15.0 pour le 1er</span>
+<span class="sd">promu, 16.9 pour le 2e, 17.4 pour le 3e).</span>
+
+<span class="sd">Pour rester COHÉRENT avec le modèle, on procède saison par saison :</span>
+<span class="sd">  - pour CHACUNE des 3 saisons d&#39;entraînement, on entraîne le modèle sur cette seule</span>
+<span class="sd">    saison (20 équipes), on simule un classement, et on note les forces de l&#39;équipe</span>
+<span class="sd">    la plus proche de la position cible.</span>
+<span class="sd">  - on moyenne ces forces (et l&#39;avantage domicile) sur les 3 saisons.</span>
+
+<span class="sd">Chaque saison a exactement ses 20 équipes : la position cible (ex 15e sur 20) est donc</span>
+<span class="sd">fiable, sans être faussée par les équipes cumulées de plusieurs saisons.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">donnees</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChargeurDonnees</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simulation.modele</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelePoisson</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simulation.simulateur</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulateur</span>
+
+
+<div class="viewcode-block" id="equipe_la_plus_proche">
+<a class="viewcode-back" href="../../simulation.forces_promus.html#simulation.forces_promus.equipe_la_plus_proche">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">equipe_la_plus_proche</span><span class="p">(</span><span class="n">resultats</span><span class="p">,</span> <span class="n">position_cible</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Renvoie le nom de l&#39;équipe dont la position moyenne est la plus proche de la cible.</span>
+
+<span class="sd">    :param resultats: classement simulé contenant une colonne &#39;position_moyenne&#39;,</span>
+<span class="sd">        indexé par nom d&#39;équipe.</span>
+<span class="sd">    :type resultats: pandas.DataFrame</span>
+<span class="sd">    :param position_cible: position visée (ex. 15.0).</span>
+<span class="sd">    :type position_cible: float</span>
+<span class="sd">    :return: nom de l&#39;équipe la plus proche de la position cible.</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ecarts</span> <span class="o">=</span> <span class="p">(</span><span class="n">resultats</span><span class="p">[</span><span class="s1">&#39;position_moyenne&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">position_cible</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>   <span class="c1"># écart à la cible</span>
+    <span class="n">nom_plus_proche</span> <span class="o">=</span> <span class="n">ecarts</span><span class="o">.</span><span class="n">sort_values</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>                   <span class="c1"># la 1ère = la plus proche</span>
+    <span class="k">return</span> <span class="n">nom_plus_proche</span></div>
+
+
+
+<div class="viewcode-block" id="forces_d_une_saison">
+<a class="viewcode-back" href="../../simulation.forces_promus.html#simulation.forces_promus.forces_d_une_saison">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">forces_d_une_saison</span><span class="p">(</span><span class="n">fichier_csv</span><span class="p">,</span> <span class="n">n_simulations</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Entraîne le modèle sur une seule saison, simule, et renvoie ses forces.</span>
+
+<span class="sd">    :param fichier_csv: chemin du CSV de la saison.</span>
+<span class="sd">    :type fichier_csv: str</span>
+<span class="sd">    :param n_simulations: nombre de simulations Monte-Carlo.</span>
+<span class="sd">    :type n_simulations: int</span>
+<span class="sd">    :return: tuple (resultats, forces, avantages, index) où resultats est le classement</span>
+<span class="sd">        simulé (DataFrame), forces le dict {index: (attaque, defense)}, avantages le</span>
+<span class="sd">        dict {index: avantage_domicile} et index le dict {nom: index}.</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="n">fichier_csv</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">get_index_equipes</span><span class="p">()</span>
+    <span class="n">matchs</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">get_matchs</span><span class="p">()</span>
+
+    <span class="n">modele</span> <span class="o">=</span> <span class="n">ModelePoisson</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+    <span class="n">modele</span><span class="o">.</span><span class="n">entrainer</span><span class="p">(</span><span class="n">matchs</span><span class="p">)</span>                       <span class="c1"># une seule saison : pas de pondération</span>
+    <span class="n">forces</span> <span class="o">=</span> <span class="n">modele</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+    <span class="n">avantages</span> <span class="o">=</span> <span class="n">modele</span><span class="o">.</span><span class="n">get_avantage_domicile</span><span class="p">()</span>
+
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">Simulateur</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">avantages</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+    <span class="n">resultats</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">simuler_monte_carlo</span><span class="p">(</span><span class="n">n_simulations</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resultats</span><span class="p">,</span> <span class="n">forces</span><span class="p">,</span> <span class="n">avantages</span><span class="p">,</span> <span class="n">index</span></div>
+
+
+
+<div class="viewcode-block" id="forces_pour_position_cible">
+<a class="viewcode-back" href="../../simulation.forces_promus.html#simulation.forces_promus.forces_pour_position_cible">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">forces_pour_position_cible</span><span class="p">(</span><span class="n">position_cible</span><span class="p">,</span> <span class="n">fichiers_saisons</span><span class="p">,</span> <span class="n">n_simulations</span><span class="o">=</span><span class="mi">300</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Approxime (attaque, defense, avantage) d&#39;un promu pour une position cible donnée.</span>
+
+<span class="sd">    Pour chaque saison : on trouve l&#39;équipe la plus proche de la cible et on prend ses</span>
+<span class="sd">    forces. On moyenne ensuite sur les 3 saisons.</span>
+
+<span class="sd">    :param position_cible: position visée (ex. 15.0, 16.9, 17.4).</span>
+<span class="sd">    :type position_cible: float</span>
+<span class="sd">    :param fichiers_saisons: liste des 3 CSV des saisons d&#39;entraînement.</span>
+<span class="sd">    :type fichiers_saisons: list</span>
+<span class="sd">    :param n_simulations: nombre de simulations Monte-Carlo par saison.</span>
+<span class="sd">    :type n_simulations: int</span>
+<span class="sd">    :return: tuple (attaque_moyenne, defense_moyenne, avantage_moyen).</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">attaques</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">defenses</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">avantages_promu</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">equipes_choisies</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">fichier</span> <span class="ow">in</span> <span class="n">fichiers_saisons</span><span class="p">:</span>               <span class="c1"># on parcourt chaque saison séparément</span>
+        <span class="n">resultats</span><span class="p">,</span> <span class="n">forces</span><span class="p">,</span> <span class="n">avantages</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">forces_d_une_saison</span><span class="p">(</span><span class="n">fichier</span><span class="p">,</span> <span class="n">n_simulations</span><span class="p">)</span>
+
+        <span class="c1"># l&#39;équipe la plus proche de la position cible dans CETTE saison</span>
+        <span class="n">nom</span> <span class="o">=</span> <span class="n">equipe_la_plus_proche</span><span class="p">(</span><span class="n">resultats</span><span class="p">,</span> <span class="n">position_cible</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">nom</span><span class="p">]</span>
+        <span class="n">att</span><span class="p">,</span> <span class="n">defe</span> <span class="o">=</span> <span class="n">forces</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+        <span class="n">attaques</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">att</span><span class="p">)</span>
+        <span class="n">defenses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">defe</span><span class="p">)</span>
+        <span class="n">avantages_promu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">avantages</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
+        <span class="n">equipes_choisies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nom</span><span class="p">)</span>
+
+    <span class="c1"># moyenne des forces sur les 3 saisons</span>
+    <span class="n">attaque_moyenne</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">attaques</span><span class="p">)</span>
+    <span class="n">defense_moyenne</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">defenses</span><span class="p">)</span>
+    <span class="n">avantage_moyen</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">avantages_promu</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Position cible </span><span class="si">{</span><span class="n">position_cible</span><span class="si">}</span><span class="s2"> -&gt; équipes choisies par saison : </span><span class="si">{</span><span class="n">equipes_choisies</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">attaque_moyenne</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">defense_moyenne</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">avantage_moyen</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Modules</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

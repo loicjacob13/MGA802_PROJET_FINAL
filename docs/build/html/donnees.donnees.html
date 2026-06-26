@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>donnees.donnees module &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="donnees.exploration_donnees module" href="donnees.exploration_donnees.html" />
+    <link rel="prev" title="donnees package" href="donnees.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-donnees.donnees">
+<span id="donnees-donnees-module"></span><h1>donnees.donnees module<a class="headerlink" href="#module-donnees.donnees" title="Lien vers cette rubrique">¶</a></h1>
+<p>donnees.py — Ce fichier permet de charger et nettoyer les données de Premier League.
+Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="donnees.donnees.ChargeurDonnees">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">donnees.donnees.</span></span><span class="sig-name descname"><span class="pre">ChargeurDonnees</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chemin_csv</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/donnees/donnees.html#ChargeurDonnees"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#donnees.donnees.ChargeurDonnees" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Charge, nettoie et donne accès aux données de matchs de Premier League (3 CSV).</p>
+<p>Accepte un seul chemin CSV (str) ou une liste de chemins (list) si on veut
+fusionner plusieurs saisons.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="donnees.donnees.ChargeurDonnees.get_equipes">
+<span class="sig-name descname"><span class="pre">get_equipes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/donnees/donnees.html#ChargeurDonnees.get_equipes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#donnees.donnees.ChargeurDonnees.get_equipes" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Retourne la liste triée alphabétiquement de toutes les équipes uniques.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>liste des noms d’équipes, triée alphabétiquement.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="donnees.donnees.ChargeurDonnees.get_index_equipes">
+<span class="sig-name descname"><span class="pre">get_index_equipes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/donnees/donnees.html#ChargeurDonnees.get_index_equipes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#donnees.donnees.ChargeurDonnees.get_index_equipes" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Associe à chaque équipe un numéro entier selon sa position dans la liste triée.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dictionnaire {nom_equipe: numero_entier}.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="donnees.donnees.ChargeurDonnees.get_matchs">
+<span class="sig-name descname"><span class="pre">get_matchs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/donnees/donnees.html#ChargeurDonnees.get_matchs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#donnees.donnees.ChargeurDonnees.get_matchs" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Retourne tous les matchs sous forme de tableau d’entiers.</p>
+<p>Chaque ligne suit le format [index_dom, index_ext, buts_dom, buts_ext].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tableau NumPy de forme (n_matchs, 4) au format entier.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="donnees.donnees.ChargeurDonnees.nettoyer">
+<span class="sig-name descname"><span class="pre">nettoyer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/donnees/donnees.html#ChargeurDonnees.nettoyer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#donnees.donnees.ChargeurDonnees.nettoyer" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Prépare les données brutes pour le modèle en filtrant les colonnes
+utiles, en convertissant les dates et en supprimant les lignes vides.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>rien ; modifie self.donnees en place.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="donnees.donnees.ChargeurDonnees.sauvegarder">
+<span class="sig-name descname"><span class="pre">sauvegarder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chemin_pickle</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/donnees/donnees.html#ChargeurDonnees.sauvegarder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#donnees.donnees.ChargeurDonnees.sauvegarder" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Sauvegarde les données nettoyées au format pickle (relecture rapide,
+conservation des types).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>chemin_pickle</strong> (<em>str</em>) – chemin du fichier .pkl de sortie.</p>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>rien ; écrit un fichier sur disque.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="donnees.donnees.ChargeurDonnees.statistiques_equipes">
+<span class="sig-name descname"><span class="pre">statistiques_equipes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/donnees/donnees.html#ChargeurDonnees.statistiques_equipes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#donnees.donnees.ChargeurDonnees.statistiques_equipes" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Calcule les buts moyens marqués et encaissés pour chaque équipe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame indexé par nom d’équipe, colonnes buts_marques_moy
+et buts_encaisses_moy.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Modules</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="donnees.html">donnees package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simulation.html">simulation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualisation.html">visualisation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="controle_input.html">controle_input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesure_temps.html">mesure_temps module</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">Modules</a><ul>
+  <li><a href="donnees.html">donnees package</a><ul>
+      <li>Previous: <a href="donnees.html" title="Chapitre précédent">donnees package</a></li>
+      <li>Next: <a href="donnees.exploration_donnees.html" title="Chapitre suivant">donnees.exploration_donnees module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/donnees.donnees.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

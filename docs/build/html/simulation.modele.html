@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>simulation.modele module &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="simulation.recherche_ponderation module" href="simulation.recherche_ponderation.html" />
+    <link rel="prev" title="simulation.main_NEW module" href="simulation.main_NEW.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-simulation.modele">
+<span id="simulation-modele-module"></span><h1>simulation.modele module<a class="headerlink" href="#module-simulation.modele" title="Lien vers cette rubrique">¶</a></h1>
+<p>modele.py — Modèle de Poisson pour estimer les forces des équipes.
+Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</p>
+<p>Le modèle apprend une force d’attaque et de défense par équipe, plus un avantage
+à domicile, en minimisant une perte de type Poisson sur les matchs passés.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">simulation.modele.</span></span><span class="sig-name descname"><span class="pre">ModelePoisson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_equipes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Modèle de Poisson qui apprend les forces (attaque/défense) des équipes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.calculer_lambda_mu">
+<span class="sig-name descname"><span class="pre">calculer_lambda_mu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx_dom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idx_ext</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.calculer_lambda_mu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.calculer_lambda_mu" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Renvoie le nombre de buts attendus pour les deux équipes d’un match.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idx_dom</strong> (<em>int</em>) – index de l’équipe à domicile.</p></li>
+<li><p><strong>idx_ext</strong> (<em>int</em>) – index de l’équipe à l’extérieur.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple (lam, mu) des buts attendus à domicile et à l’extérieur.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.charger_depuis_grille">
+<span class="sig-name descname"><span class="pre">charger_depuis_grille</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grille</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.charger_depuis_grille"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.charger_depuis_grille" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Lit la grille MultiIndex et en extrait les matchs exploitables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>grille</strong> (<em>pandas.DataFrame</em>) – grille MultiIndex (format pandas) contenant les matchs.</p>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>tableau des matchs au format [idx_dom, idx_ext, buts_dom, buts_ext].</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.deplier">
+<span class="sig-name descname"><span class="pre">deplier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.deplier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.deplier" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Découpe le vecteur de paramètres en attaques, défenses et avantages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>params</strong> (<em>numpy.ndarray</em>) – vecteur plat de longueur 3 * n_equipes.</p>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple (attaques, defenses, avantage), chacun de longueur n_equipes.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.entrainer">
+<span class="sig-name descname"><span class="pre">entrainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matchs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.entrainer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.entrainer" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Apprend les paramètres en minimisant la perte pondérée.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>matchs</strong> (<em>numpy.ndarray</em>) – tableau des matchs [idx_dom, idx_ext, buts_dom, buts_ext].</p></li>
+<li><p><strong>poids</strong> (<em>numpy.ndarray</em><em> | </em><em>None</em>) – poids par match (même longueur que matchs). Si None, poids égaux.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>rien ; met à jour self.params et self.perte_finale.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.get_avantage_domicile">
+<span class="sig-name descname"><span class="pre">get_avantage_domicile</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.get_avantage_domicile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.get_avantage_domicile" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Renvoie l’avantage du terrain pour chaque équipe (dernier paramètre du vecteur).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dictionnaire {numero_equipe: avantage_domicile}.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.get_forces">
+<span class="sig-name descname"><span class="pre">get_forces</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.get_forces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.get_forces" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Renvoie les forces apprises sous forme de dictionnaire pour le simulateur.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dictionnaire {numero_equipe: (attaque, defense)}.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.get_index_equipes">
+<span class="sig-name descname"><span class="pre">get_index_equipes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.get_index_equipes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.get_index_equipes" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Renvoie la correspondance {nom_equipe: numero} mémorisée à la lecture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dictionnaire {nom_equipe: numero}, ou None si non chargé.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.perte">
+<span class="sig-name descname"><span class="pre">perte</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matchs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.perte"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.perte" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Calcule la perte de Poisson (avec régularisation) sur tous les matchs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>params</strong> (<em>numpy.ndarray</em>) – vecteur de paramètres à évaluer.</p></li>
+<li><p><strong>matchs</strong> (<em>numpy.ndarray</em>) – tableau des matchs [idx_dom, idx_ext, buts_dom, buts_ext].</p></li>
+<li><p><strong>poids</strong> (<em>numpy.ndarray</em><em> | </em><em>None</em>) – poids par match (même longueur que matchs). Si None, poids égaux.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>valeur de la perte totale à minimiser.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.modele.ModelePoisson.sauvegarder">
+<span class="sig-name descname"><span class="pre">sauvegarder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chemin_pickle</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/modele.html#ModelePoisson.sauvegarder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.modele.ModelePoisson.sauvegarder" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Sauvegarde les forces apprises au format pickle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>chemin_pickle</strong> (<em>str</em>) – chemin du fichier .pkl de sortie.</p>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>rien ; écrit un fichier sur disque.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Modules</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="donnees.html">donnees package</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="simulation.html">simulation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualisation.html">visualisation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="controle_input.html">controle_input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesure_temps.html">mesure_temps module</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">Modules</a><ul>
+  <li><a href="simulation.html">simulation package</a><ul>
+      <li>Previous: <a href="simulation.main_NEW.html" title="Chapitre précédent">simulation.main_NEW module</a></li>
+      <li>Next: <a href="simulation.recherche_ponderation.html" title="Chapitre suivant">simulation.recherche_ponderation module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/simulation.modele.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

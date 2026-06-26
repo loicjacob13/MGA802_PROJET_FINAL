@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>visualisation.visualisation &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Recherche" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de visualisation.visualisation</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">visualisation.py — Graphiques Matplotlib pour les résultats de simulation.</span>
+<span class="sd">Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<div class="viewcode-block" id="Visualiseur">
+<a class="viewcode-back" href="../../visualisation.visualisation.html#visualisation.visualisation.Visualiseur">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Visualiseur</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Affiche les résultats de la simulation Monte-Carlo avec Matplotlib.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resultats</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialise le visualiseur avec les résultats de simulation.</span>
+
+<span class="sd">        :param resultats: classement Monte-Carlo indexé par nom d&#39;équipe (sortie de</span>
+<span class="sd">            simuler_monte_carlo).</span>
+<span class="sd">        :type resultats: pandas.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resultats</span> <span class="o">=</span> <span class="n">resultats</span>   <span class="c1"># DataFrame indexé par nom d&#39;équipe</span>
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># Graphique 1 — Probabilité d&#39;être champion</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+<div class="viewcode-block" id="Visualiseur.graphique_probabilites_titre">
+<a class="viewcode-back" href="../../visualisation.visualisation.html#visualisation.visualisation.Visualiseur.graphique_probabilites_titre">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">graphique_probabilites_titre</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Trace un diagramme en barres de la probabilité d&#39;être champion par équipe.</span>
+
+<span class="sd">        :return: rien ; prépare la figure Matplotlib (affichée par plt.show()).</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resultats</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;proba_titre&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">noms</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">probas</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;proba_titre&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">noms</span><span class="p">,</span> <span class="n">probas</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;steelblue&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">probas</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">val</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">:</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="o">+</span> <span class="mf">0.3</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">val</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Probabilité d&#39;être champion de Premier League&quot;</span><span class="p">,</span>
+                     <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Probabilité (%)&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Équipe&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="c1">#plt.savefig(&quot;../graphique_probabilites_titre.png&quot;, dpi=150)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># Graphique 2 — Distribution des points d&#39;une équipe</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+<div class="viewcode-block" id="Visualiseur.graphique_distribution_points">
+<a class="viewcode-back" href="../../visualisation.visualisation.html#visualisation.visualisation.Visualiseur.graphique_distribution_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">graphique_distribution_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nom_equipe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">simulateur</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Trace l&#39;histogramme des points finaux d&#39;une équipe sur toutes les simulations.</span>
+
+<span class="sd">        Si un simulateur est fourni, utilise la vraie distribution (points_bruts) ;</span>
+<span class="sd">        sinon, génère une approximation gaussienne autour de la moyenne.</span>
+
+<span class="sd">        :param nom_equipe: nom de l&#39;équipe à détailler.</span>
+<span class="sd">        :type nom_equipe: str</span>
+<span class="sd">        :param simulateur: simulateur ayant l&#39;attribut points_bruts (optionnel).</span>
+<span class="sd">        :type simulateur: Simulateur | None</span>
+<span class="sd">        :raises ValueError: si l&#39;équipe est introuvable dans les résultats.</span>
+<span class="sd">        :return: rien ; prépare la figure Matplotlib (affichée par plt.show()).</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">nom_equipe</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">resultats</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Équipe &#39;</span><span class="si">{</span><span class="n">nom_equipe</span><span class="si">}</span><span class="s2">&#39; introuvable.&quot;</span><span class="p">)</span>
+
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">simulateur</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">simulateur</span><span class="p">,</span> <span class="s1">&#39;points_bruts&#39;</span><span class="p">):</span>
+            <span class="c1"># Vrais points simulés — distribution réelle</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="n">simulateur</span><span class="o">.</span><span class="n">points_bruts</span><span class="p">[</span><span class="n">nom_equipe</span><span class="p">]</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;steelblue&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+            <span class="n">moyenne</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Fallback approximatif si pas de simulateur fourni</span>
+            <span class="n">moyenne</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resultats</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nom_equipe</span><span class="p">,</span> <span class="s1">&#39;points_moyens&#39;</span><span class="p">]</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">moyenne</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">114</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;steelblue&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">moyenne</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;crimson&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Moyenne : </span><span class="si">{</span><span class="n">moyenne</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> pts&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Distribution des points finaux — </span><span class="si">{</span><span class="n">nom_equipe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Points en fin de saison&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Nombre de simulations&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="c1">#plt.savefig(f&quot;graphique_distribution_{nom_equipe.replace(&#39; &#39;, &#39;_&#39;)}.png&quot;, dpi=150)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># Graphique 3 — Classement moyen de toutes les équipes</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+<div class="viewcode-block" id="Visualiseur.graphique_classement_moyen">
+<a class="viewcode-back" href="../../visualisation.visualisation.html#visualisation.visualisation.Visualiseur.graphique_classement_moyen">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">graphique_classement_moyen</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Trace les positions moyennes de toutes les équipes en barres horizontales.</span>
+
+<span class="sd">        Un code couleur distingue le top 4 (bleu), la zone de relégation (rouge)</span>
+<span class="sd">        et le milieu de tableau (gris).</span>
+
+<span class="sd">        :return: rien ; prépare la figure Matplotlib (affichée par plt.show()).</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Tri par position_moyenne CROISSANTE puis on inverse l&#39;ordre pour barh</span>
+        <span class="c1"># (barh met la dernière valeur en haut → on trie décroissant pour avoir le 1er en haut)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resultats</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;position_moyenne&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># décroissant !</span>
+
+        <span class="n">noms</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;position_moyenne&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+        <span class="n">couleurs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;=</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="n">couleurs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;steelblue&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">pos</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">:</span>
+                <span class="n">couleurs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;crimson&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">couleurs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;lightgray&#39;</span><span class="p">)</span>
+
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="n">barres</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">barh</span><span class="p">(</span><span class="n">noms</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">couleurs</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">barre</span><span class="p">,</span> <span class="n">valeur</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">barres</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">valeur</span> <span class="o">+</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">barre</span><span class="o">.</span><span class="n">get_y</span><span class="p">()</span> <span class="o">+</span> <span class="n">barre</span><span class="o">.</span><span class="n">get_height</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">valeur</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mf">4.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;steelblue&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Limite top 4&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mf">17.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;crimson&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Limite relégation&#39;</span><span class="p">)</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Classement moyen des équipes (Monte-Carlo)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Position moyenne en fin de saison&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Équipe&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+        <span class="c1"># Axe X : 1 à gauche (meilleur), 20 à droite — PAS d&#39;inversion cette fois</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="c1">#plt.savefig(&quot;../graphique_classement_moyen.png&quot;, dpi=150)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Modules</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

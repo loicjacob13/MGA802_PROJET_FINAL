@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>simulation.simulateur &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Recherche" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de simulation.simulateur</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">simulateur.py — Simulation Monte-Carlo de la Premier League par loi de Poisson.</span>
+<span class="sd">Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<div class="viewcode-block" id="Simulateur">
+<a class="viewcode-back" href="../../simulation.simulateur.html#simulation.simulateur.Simulateur">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Simulateur</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simule des saisons de Premier League par tirage aléatoire (loi de Poisson).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">forces</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">avantage_domicile</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">index_equipes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialise le simulateur à partir des forces apprises par le modèle.</span>
+
+<span class="sd">        :param forces: forces des équipes au format {index: (attaque, defense)}.</span>
+<span class="sd">        :type forces: dict</span>
+<span class="sd">        :param avantage_domicile: avantage à domicile par équipe {index: valeur}.</span>
+<span class="sd">        :type avantage_domicile: dict</span>
+<span class="sd">        :param index_equipes: correspondance {nom: index}.</span>
+<span class="sd">        :type index_equipes: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forces</span> <span class="o">=</span> <span class="n">forces</span>                        <span class="c1"># {index: (attaque, defense)}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avantage_domicile</span> <span class="o">=</span> <span class="n">avantage_domicile</span>  <span class="c1"># float</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index_equipes</span> <span class="o">=</span> <span class="n">index_equipes</span>          <span class="c1"># {nom: index}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">forces</span><span class="p">)</span>
+
+        <span class="c1"># Dictionnaire inverse {index: nom} pour afficher les vrais noms dans les résultats</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">index_equipes</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="c1"># Générateur aléatoire NumPy (reproductible si on fixe la graine)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">()</span>
+
+        <span class="c1"># Tableaux NumPy des forces pour accès vectorisé rapide</span>
+        <span class="c1"># attaques[i] = force d&#39;attaque de l&#39;équipe i</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">attaques</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">forces</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">defenses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">forces</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avantages</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">avantage_domicile</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)])</span>
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># ÉTAPE 1 — Simuler un seul match</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Simulateur.simuler_match">
+<a class="viewcode-back" href="../../simulation.simulateur.html#simulation.simulateur.Simulateur.simuler_match">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">simuler_match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index_dom</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">index_ext</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Tire un score aléatoire pour un match entre deux équipes.</span>
+
+<span class="sd">        :param index_dom: index de l&#39;équipe à domicile.</span>
+<span class="sd">        :type index_dom: int</span>
+<span class="sd">        :param index_ext: index de l&#39;équipe à l&#39;extérieur.</span>
+<span class="sd">        :type index_ext: int</span>
+<span class="sd">        :return: tuple (buts_dom, buts_ext) tiré selon la loi de Poisson.</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attaque_dom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attaques</span><span class="p">[</span><span class="n">index_dom</span><span class="p">]</span>
+        <span class="n">defense_dom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">defenses</span><span class="p">[</span><span class="n">index_dom</span><span class="p">]</span>
+        <span class="n">attaque_ext</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attaques</span><span class="p">[</span><span class="n">index_ext</span><span class="p">]</span>
+        <span class="n">defense_ext</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">defenses</span><span class="p">[</span><span class="n">index_ext</span><span class="p">]</span>
+
+        <span class="c1"># Formule du modèle de Poisson</span>
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">attaque_dom</span> <span class="o">-</span> <span class="n">defense_ext</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">avantages</span><span class="p">[</span><span class="n">index_dom</span><span class="p">])</span>  <span class="c1"># buts attendus dom.</span>
+        <span class="n">mu</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">attaque_ext</span> <span class="o">-</span> <span class="n">defense_dom</span><span class="p">)</span>                           <span class="c1"># buts attendus ext.</span>
+
+        <span class="c1"># Tirage aléatoire selon la loi de Poisson</span>
+        <span class="n">buts_dom</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">lam</span><span class="p">))</span>
+        <span class="n">buts_ext</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">mu</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">buts_dom</span><span class="p">,</span> <span class="n">buts_ext</span></div>
+
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># ÉTAPE 2 — Simuler une saison complète (380 matchs)</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Simulateur.simuler_saison">
+<a class="viewcode-back" href="../../simulation.simulateur.html#simulation.simulateur.Simulateur.simuler_saison">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">simuler_saison</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Joue les 380 matchs d&#39;une saison et retourne le classement final.</span>
+
+<span class="sd">        :return: classement final trié, colonnes equipe / points / diff_buts / position.</span>
+<span class="sd">        :rtype: pandas.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">diff_buts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="n">calendrier</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">dom</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">dom</span> <span class="o">!=</span> <span class="n">ext</span><span class="p">:</span>
+                    <span class="n">calendrier</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">dom</span><span class="p">,</span> <span class="n">ext</span><span class="p">))</span>
+
+        <span class="n">calendrier</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">calendrier</span><span class="p">)</span>
+        <span class="n">ordre</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">calendrier</span><span class="p">))</span>
+        <span class="n">calendrier</span> <span class="o">=</span> <span class="n">calendrier</span><span class="p">[</span><span class="n">ordre</span><span class="p">]</span>
+
+        <span class="c1"># On suit le numéro de journée pour activer le moral en fin de saison</span>
+        <span class="n">n_matchs_par_journee</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span> <span class="o">//</span> <span class="mi">2</span>  <span class="c1"># 10 matchs par journée (20 équipes / 2)</span>
+        <span class="n">journee_actuelle</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Classement courant (mis à jour au fil des journées pour le moral)</span>
+        <span class="n">classement_courant</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+            <span class="s1">&#39;equipe&#39;</span><span class="p">:</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)],</span>
+            <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="n">points</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="s1">&#39;position&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)),</span>
+        <span class="p">})</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">dom</span><span class="p">,</span> <span class="n">ext</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">calendrier</span><span class="p">):</span>
+            <span class="n">dom</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dom</span><span class="p">)</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+
+            <span class="c1"># Mise à jour de la journée tous les n_matchs_par_journee matchs</span>
+            <span class="n">journee_actuelle</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="n">n_matchs_par_journee</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="c1"># Calcul du lambda de base</span>
+            <span class="n">lam_base</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attaques</span><span class="p">[</span><span class="n">dom</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">defenses</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">avantages</span><span class="p">[</span><span class="n">dom</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">mu_base</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attaques</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">defenses</span><span class="p">[</span><span class="n">dom</span><span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Application du moral (actif uniquement journée &gt;= 35)</span>
+            <span class="n">lam</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">appliquer_moral</span><span class="p">(</span><span class="n">lam_base</span><span class="p">,</span> <span class="n">dom</span><span class="p">,</span> <span class="n">journee_actuelle</span><span class="p">,</span> <span class="n">classement_courant</span><span class="p">)</span>
+            <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">appliquer_moral</span><span class="p">(</span><span class="n">mu_base</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">journee_actuelle</span><span class="p">,</span> <span class="n">classement_courant</span><span class="p">)</span>
+
+            <span class="c1"># Tirage Poisson avec les lambda ajustés</span>
+            <span class="n">buts_dom</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">lam</span><span class="p">))</span>
+            <span class="n">buts_ext</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">mu</span><span class="p">))</span>
+
+            <span class="n">diff</span> <span class="o">=</span> <span class="n">buts_dom</span> <span class="o">-</span> <span class="n">buts_ext</span>
+            <span class="n">diff_buts</span><span class="p">[</span><span class="n">dom</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span>
+            <span class="n">diff_buts</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">-=</span> <span class="n">diff</span>
+
+            <span class="k">if</span> <span class="n">buts_dom</span> <span class="o">&gt;</span> <span class="n">buts_ext</span><span class="p">:</span>
+                <span class="n">points</span><span class="p">[</span><span class="n">dom</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">3</span>
+            <span class="k">elif</span> <span class="n">buts_dom</span> <span class="o">==</span> <span class="n">buts_ext</span><span class="p">:</span>
+                <span class="n">points</span><span class="p">[</span><span class="n">dom</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">points</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">points</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">3</span>
+
+            <span class="c1"># Mise à jour du classement courant à chaque fin de journée</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">n_matchs_par_journee</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">df_temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                    <span class="s1">&#39;equipe&#39;</span><span class="p">:</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)],</span>
+                    <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="n">points</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                <span class="p">})</span>
+                <span class="n">df_temp</span> <span class="o">=</span> <span class="n">df_temp</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;points&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">df_temp</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_temp</span><span class="o">.</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">classement_courant</span> <span class="o">=</span> <span class="n">df_temp</span>  <span class="c1"># on met à jour le classement pour le moral</span>
+
+        <span class="c1"># Construction du classement final</span>
+        <span class="n">classement</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+            <span class="s1">&#39;equipe&#39;</span><span class="p">:</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)],</span>
+            <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="n">points</span><span class="p">,</span>
+            <span class="s1">&#39;diff_buts&#39;</span><span class="p">:</span> <span class="n">diff_buts</span><span class="p">,</span>
+        <span class="p">})</span>
+        <span class="n">classement</span> <span class="o">=</span> <span class="n">classement</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span>
+            <span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;points&#39;</span><span class="p">,</span> <span class="s1">&#39;diff_buts&#39;</span><span class="p">],</span>
+            <span class="n">ascending</span><span class="o">=</span><span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">classement</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">classement</span><span class="o">.</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">classement</span></div>
+
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># ÉTAPE 3 — Simulation Monte-Carlo (N saisons → probabilités)</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+<div class="viewcode-block" id="Simulateur.simuler_monte_carlo">
+<a class="viewcode-back" href="../../simulation.simulateur.html#simulation.simulateur.Simulateur.simuler_monte_carlo">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">simuler_monte_carlo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_simulations</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Répète la simulation de saison N fois et calcule les probabilités de classement.</span>
+
+<span class="sd">        :param n_simulations: nombre de saisons à simuler.</span>
+<span class="sd">        :type n_simulations: int</span>
+<span class="sd">        :return: DataFrame indexé par équipe, avec proba_titre, proba_top4,</span>
+<span class="sd">            proba_relegation, position_moyenne et points_moyens, trié par</span>
+<span class="sd">            position moyenne croissante.</span>
+<span class="sd">        :rtype: pandas.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">positions_acc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">,</span> <span class="n">n_simulations</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">points_acc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">,</span> <span class="n">n_simulations</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">sim</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_simulations</span><span class="p">):</span>
+            <span class="n">classement</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simuler_saison</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">ligne</span> <span class="ow">in</span> <span class="n">classement</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_equipes</span><span class="p">[</span><span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;equipe&#39;</span><span class="p">]]</span>
+                <span class="n">positions_acc</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">sim</span><span class="p">]</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span>
+                <span class="n">points_acc</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">sim</span><span class="p">]</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;points&#39;</span><span class="p">]</span>
+
+        <span class="c1">#points bruts accessibles pour graphique_distribution_points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points_bruts</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="n">points_acc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="n">proba_titre</span> <span class="o">=</span> <span class="p">(</span><span class="n">positions_acc</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">proba_top4</span> <span class="o">=</span> <span class="p">(</span><span class="n">positions_acc</span> <span class="o">&lt;=</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">proba_relegation</span> <span class="o">=</span> <span class="p">(</span><span class="n">positions_acc</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">position_moyenne</span> <span class="o">=</span> <span class="n">positions_acc</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">points_moyens</span> <span class="o">=</span> <span class="n">points_acc</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">resultats</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+            <span class="s1">&#39;proba_titre&#39;</span><span class="p">:</span> <span class="n">proba_titre</span><span class="p">,</span>
+            <span class="s1">&#39;proba_top4&#39;</span><span class="p">:</span> <span class="n">proba_top4</span><span class="p">,</span>
+            <span class="s1">&#39;proba_relegation&#39;</span><span class="p">:</span> <span class="n">proba_relegation</span><span class="p">,</span>
+            <span class="s1">&#39;position_moyenne&#39;</span><span class="p">:</span> <span class="n">position_moyenne</span><span class="p">,</span>
+            <span class="s1">&#39;points_moyens&#39;</span><span class="p">:</span> <span class="n">points_moyens</span><span class="p">,</span>
+        <span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)])</span>
+
+        <span class="n">resultats</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;equipe&#39;</span>
+        <span class="n">resultats</span> <span class="o">=</span> <span class="n">resultats</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;position_moyenne&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">resultats</span></div>
+
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># ÉTAPE 4 — Facteur de moral</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Simulateur.appliquer_moral">
+<a class="viewcode-back" href="../../simulation.simulateur.html#simulation.simulateur.Simulateur.appliquer_moral">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">appliquer_moral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lambda_base</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">index_equipe</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                        <span class="n">journee</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">classement_actuel</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Ajuste le lambda d&#39;une équipe en fin de saison selon son enjeu.</span>
+
+<span class="sd">        Aucun ajustement avant la journée 35. Ensuite, bonus de motivation pour les</span>
+<span class="sd">        équipes menacées de relégation (+10%) ou en course pour le haut de tableau (+5%).</span>
+
+<span class="sd">        :param lambda_base: buts attendus avant ajustement.</span>
+<span class="sd">        :type lambda_base: float</span>
+<span class="sd">        :param index_equipe: index de l&#39;équipe concernée.</span>
+<span class="sd">        :type index_equipe: int</span>
+<span class="sd">        :param journee: numéro de la journée en cours.</span>
+<span class="sd">        :type journee: int</span>
+<span class="sd">        :param classement_actuel: classement courant avec colonnes equipe / position.</span>
+<span class="sd">        :type classement_actuel: pandas.DataFrame</span>
+<span class="sd">        :return: lambda ajusté par le multiplicateur de moral.</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Avant la journée 35, aucun ajustement</span>
+        <span class="k">if</span> <span class="n">journee</span> <span class="o">&lt;</span> <span class="mi">35</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">lambda_base</span>
+
+        <span class="n">multiplicateur</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># par défaut : aucun bonus</span>
+
+        <span class="c1"># On cherche la position actuelle de cette équipe dans le classement</span>
+        <span class="n">nom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">[</span><span class="n">index_equipe</span><span class="p">]</span>
+
+        <span class="c1"># On cherche la ligne de cette équipe dans le classement actuel</span>
+        <span class="n">ligne</span> <span class="o">=</span> <span class="n">classement_actuel</span><span class="p">[</span><span class="n">classement_actuel</span><span class="p">[</span><span class="s1">&#39;equipe&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">nom</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">ligne</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">lambda_base</span>   <span class="c1"># sécurité : si l&#39;équipe n&#39;est pas trouvée</span>
+
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Équipe menacée de relégation (18e, 19e ou 20e) → se bat → bonus</span>
+        <span class="k">if</span> <span class="n">position</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">:</span>
+            <span class="n">multiplicateur</span> <span class="o">=</span> <span class="mf">1.1</span>   <span class="c1"># +10% de motivation</span>
+
+        <span class="c1"># Équipe en course pour le titre ou le top 4 → motivation européenne</span>
+        <span class="k">elif</span> <span class="n">position</span> <span class="o">&lt;=</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">multiplicateur</span> <span class="o">=</span> <span class="mf">1.05</span>  <span class="c1"># +5% de motivation</span>
+
+        <span class="k">return</span> <span class="n">lambda_base</span> <span class="o">*</span> <span class="n">multiplicateur</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Modules</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,15 @@
+# PyCharm
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Environnement virtuel
+.venv/
+
+# Sphinx — on ignore le cache mais on GARDE le HTML pour publier la doc
+docs/build/doctrees/
+
+# Fichiers pickle générés
+*.pkl

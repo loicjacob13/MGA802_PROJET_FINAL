@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>simulation.main_NEW &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Recherche" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de simulation.main_NEW</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">main_NEW.py — Choisir une saison et la simuler automatiquement.</span>
+<span class="sd">Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</span>
+
+<span class="sd">PRINCIPE :</span>
+<span class="sd">L&#39;utilisateur choisit une saison. On cherche d&#39;abord le meilleur trio de pondération</span>
+<span class="sd">(validé sur la saison juste avant celle choisie), puis le modèle s&#39;entraîne sur les</span>
+<span class="sd">3 saisons précédentes avec ces poids, approxime les forces des équipes promues, et</span>
+<span class="sd">simule. Si la saison a déjà été jouée, on compare au classement réel.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">donnees</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChargeurDonnees</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simulation.modele</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelePoisson</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simulation.simulateur</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulateur</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">visualisation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Visualiseur</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simulation.forces_promus</span><span class="w"> </span><span class="kn">import</span> <span class="n">forces_pour_position_cible</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simulation.recherche_ponderation</span><span class="w"> </span><span class="kn">import</span> <span class="n">trouver_meilleur_trio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">controle_input</span><span class="w"> </span><span class="kn">import</span> <span class="n">demander_saison</span><span class="p">,</span> <span class="n">demander_entier_positif</span><span class="p">,</span> <span class="n">demander_sigle</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mesure_temps</span><span class="w"> </span><span class="kn">import</span> <span class="n">chrono_simulation</span>
+
+<span class="c1"># ----------------------------------------------------------------------</span>
+<span class="c1"># 1. SAISONS DISPONIBLES</span>
+<span class="c1"># ----------------------------------------------------------------------</span>
+<span class="c1"># Pour chaque saison on indique :</span>
+<span class="c1">#   csv          : le fichier de la saison cible (None si elle n&#39;est pas encore jouée)</span>
+<span class="c1">#   precedentes  : les 3 saisons d&#39;entraînement (plus ancienne -&gt; plus récente)</span>
+<span class="c1">#   validation   : la saison &quot;juste avant&quot; servant à calibrer les poids</span>
+<span class="c1">#   train_valid  : les 3 saisons d&#39;entraînement pour cette validation</span>
+<span class="n">SAISONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;2021-2022&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;precedentes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2018-2019.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2019-2020.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;validation&quot;</span><span class="p">:</span> <span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;train_valid&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2017-2018.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-2019.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2019-2020.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;promus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Norwich&quot;</span><span class="p">,</span> <span class="s2">&quot;Watford&quot;</span><span class="p">,</span> <span class="s2">&quot;Brentford&quot;</span><span class="p">],</span>   <span class="c1"># 1er, 2e, 3e promu</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;2022-2023&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;precedentes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2019-2020.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;validation&quot;</span><span class="p">:</span> <span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;train_valid&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2018-2019.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2019-2020.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;promus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Fulham&quot;</span><span class="p">,</span> <span class="s2">&quot;Bournemouth&quot;</span><span class="p">,</span> <span class="s2">&quot;Nott&#39;m Forest&quot;</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;2023-2024&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;precedentes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;validation&quot;</span><span class="p">:</span> <span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;train_valid&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2019-2020.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;promus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Burnley&quot;</span><span class="p">,</span> <span class="s2">&quot;Sheffield United&quot;</span><span class="p">,</span> <span class="s2">&quot;Luton&quot;</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;2024-2025&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="s2">&quot;2024-2025.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;precedentes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;validation&quot;</span><span class="p">:</span> <span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;train_valid&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;promus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Leicester&quot;</span><span class="p">,</span> <span class="s2">&quot;Ipswich&quot;</span><span class="p">,</span> <span class="s2">&quot;Southampton&quot;</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;2025-2026&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="s2">&quot;2025-2026.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;precedentes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2024-2025.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;validation&quot;</span><span class="p">:</span> <span class="s2">&quot;2024-2025.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;train_valid&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;promus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Leeds&quot;</span><span class="p">,</span> <span class="s2">&quot;Burnley&quot;</span><span class="p">,</span> <span class="s2">&quot;Sunderland&quot;</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;2026-2027&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>    <span class="c1"># saison future : pas encore jouée</span>
+        <span class="s2">&quot;precedentes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2024-2025.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2025-2026.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;validation&quot;</span><span class="p">:</span> <span class="s2">&quot;2025-2026.csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;train_valid&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;2024-2025.csv&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;promus&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Coventry&quot;</span><span class="p">,</span> <span class="s2">&quot;Ipswich&quot;</span><span class="p">,</span> <span class="s2">&quot;Millwall&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;relegues_futurs&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;West Ham&quot;</span><span class="p">,</span> <span class="s2">&quot;Burnley&quot;</span><span class="p">,</span> <span class="s2">&quot;Wolves&quot;</span><span class="p">],</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="c1"># Positions cibles des 3 promus, identiques pour chaque saison</span>
+<span class="n">POSITIONS_PROMUS</span> <span class="o">=</span> <span class="p">[</span><span class="mf">15.0</span><span class="p">,</span> <span class="mf">16.9</span><span class="p">,</span> <span class="mf">17.4</span><span class="p">]</span>
+
+<span class="c1"># Sigle court de chaque équipe (pour faciliter la saisie de l&#39;utilisateur)</span>
+<span class="n">SIGLES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Arsenal&quot;</span><span class="p">:</span> <span class="s2">&quot;ARS&quot;</span><span class="p">,</span> <span class="s2">&quot;Aston Villa&quot;</span><span class="p">:</span> <span class="s2">&quot;AVL&quot;</span><span class="p">,</span> <span class="s2">&quot;Bournemouth&quot;</span><span class="p">:</span> <span class="s2">&quot;BOU&quot;</span><span class="p">,</span> <span class="s2">&quot;Brentford&quot;</span><span class="p">:</span> <span class="s2">&quot;BRE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Brighton&quot;</span><span class="p">:</span> <span class="s2">&quot;BHA&quot;</span><span class="p">,</span> <span class="s2">&quot;Burnley&quot;</span><span class="p">:</span> <span class="s2">&quot;BUR&quot;</span><span class="p">,</span> <span class="s2">&quot;Chelsea&quot;</span><span class="p">:</span> <span class="s2">&quot;CHE&quot;</span><span class="p">,</span> <span class="s2">&quot;Crystal Palace&quot;</span><span class="p">:</span> <span class="s2">&quot;CRY&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Everton&quot;</span><span class="p">:</span> <span class="s2">&quot;EVE&quot;</span><span class="p">,</span> <span class="s2">&quot;Fulham&quot;</span><span class="p">:</span> <span class="s2">&quot;FUL&quot;</span><span class="p">,</span> <span class="s2">&quot;Ipswich&quot;</span><span class="p">:</span> <span class="s2">&quot;IPS&quot;</span><span class="p">,</span> <span class="s2">&quot;Leeds&quot;</span><span class="p">:</span> <span class="s2">&quot;LEE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Leicester&quot;</span><span class="p">:</span> <span class="s2">&quot;LEI&quot;</span><span class="p">,</span> <span class="s2">&quot;Liverpool&quot;</span><span class="p">:</span> <span class="s2">&quot;LIV&quot;</span><span class="p">,</span> <span class="s2">&quot;Luton&quot;</span><span class="p">:</span> <span class="s2">&quot;LUT&quot;</span><span class="p">,</span> <span class="s2">&quot;Man City&quot;</span><span class="p">:</span> <span class="s2">&quot;MCI&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Man United&quot;</span><span class="p">:</span> <span class="s2">&quot;MUN&quot;</span><span class="p">,</span> <span class="s2">&quot;Newcastle&quot;</span><span class="p">:</span> <span class="s2">&quot;NEW&quot;</span><span class="p">,</span> <span class="s2">&quot;Norwich&quot;</span><span class="p">:</span> <span class="s2">&quot;NOR&quot;</span><span class="p">,</span> <span class="s2">&quot;Nott&#39;m Forest&quot;</span><span class="p">:</span> <span class="s2">&quot;NFO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Sheffield United&quot;</span><span class="p">:</span> <span class="s2">&quot;SHU&quot;</span><span class="p">,</span> <span class="s2">&quot;Southampton&quot;</span><span class="p">:</span> <span class="s2">&quot;SOU&quot;</span><span class="p">,</span> <span class="s2">&quot;Sunderland&quot;</span><span class="p">:</span> <span class="s2">&quot;SUN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Tottenham&quot;</span><span class="p">:</span> <span class="s2">&quot;TOT&quot;</span><span class="p">,</span> <span class="s2">&quot;Watford&quot;</span><span class="p">:</span> <span class="s2">&quot;WAT&quot;</span><span class="p">,</span> <span class="s2">&quot;West Ham&quot;</span><span class="p">:</span> <span class="s2">&quot;WHU&quot;</span><span class="p">,</span> <span class="s2">&quot;Wolves&quot;</span><span class="p">:</span> <span class="s2">&quot;WOL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Coventry&quot;</span><span class="p">:</span> <span class="s2">&quot;COV&quot;</span><span class="p">,</span> <span class="s2">&quot;Millwall&quot;</span><span class="p">:</span> <span class="s2">&quot;MIL&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="c1"># ----------------------------------------------------------------------</span>
+<span class="c1"># 2. FONCTIONS UTILITAIRES</span>
+<span class="c1"># ----------------------------------------------------------------------</span>
+<div class="viewcode-block" id="matchs_avec_index">
+<a class="viewcode-back" href="../../simulation.main_NEW.html#simulation.main_NEW.matchs_avec_index">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">matchs_avec_index</span><span class="p">(</span><span class="n">chargeur</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reconstruit la liste des matchs en remplaçant les noms d&#39;équipes par leur numéro.</span>
+
+<span class="sd">    :param chargeur: instance ChargeurDonnees déjà chargée.</span>
+<span class="sd">    :type chargeur: ChargeurDonnees</span>
+<span class="sd">    :param index: correspondance {nom_equipe: numero}.</span>
+<span class="sd">    :type index: dict</span>
+<span class="sd">    :return: tableau des matchs au format [idx_dom, idx_ext, buts_dom, buts_ext].</span>
+<span class="sd">    :rtype: numpy.ndarray</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">brutes</span> <span class="o">=</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">donnees</span><span class="p">[[</span><span class="s1">&#39;HomeTeam&#39;</span><span class="p">,</span> <span class="s1">&#39;AwayTeam&#39;</span><span class="p">,</span> <span class="s1">&#39;FTHG&#39;</span><span class="p">,</span> <span class="s1">&#39;FTAG&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">lignes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ligne</span> <span class="ow">in</span> <span class="n">brutes</span><span class="p">:</span>                       <span class="c1"># on parcourt chaque match</span>
+        <span class="n">nom_dom</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">nom_ext</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">buts_dom</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ligne</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">buts_ext</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ligne</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="n">lignes</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">index</span><span class="p">[</span><span class="n">nom_dom</span><span class="p">],</span> <span class="n">index</span><span class="p">[</span><span class="n">nom_ext</span><span class="p">],</span> <span class="n">buts_dom</span><span class="p">,</span> <span class="n">buts_ext</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lignes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="classement_reel">
+<a class="viewcode-back" href="../../simulation.main_NEW.html#simulation.main_NEW.classement_reel">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">classement_reel</span><span class="p">(</span><span class="n">chargeur</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calcule le vrai classement final (3 points victoire / 1 nul / 0 défaite).</span>
+
+<span class="sd">    :param chargeur: instance ChargeurDonnees déjà chargée.</span>
+<span class="sd">    :type chargeur: ChargeurDonnees</span>
+<span class="sd">    :param index: correspondance {nom_equipe: numero}.</span>
+<span class="sd">    :type index: dict</span>
+<span class="sd">    :param n: nombre d&#39;équipes.</span>
+<span class="sd">    :type n: int</span>
+<span class="sd">    :return: tableau où positions[numero_equipe] donne la position finale (1 = premier).</span>
+<span class="sd">    :rtype: numpy.ndarray</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">matchs</span> <span class="o">=</span> <span class="n">matchs_avec_index</span><span class="p">(</span><span class="n">chargeur</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">ligne</span> <span class="ow">in</span> <span class="n">matchs</span><span class="p">:</span>                       <span class="c1"># on parcourt chaque match</span>
+        <span class="n">idx_dom</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">idx_ext</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">buts_dom</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">buts_ext</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">buts_dom</span> <span class="o">&gt;</span> <span class="n">buts_ext</span><span class="p">:</span>                <span class="c1"># victoire domicile</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">3</span>
+        <span class="k">elif</span> <span class="n">buts_dom</span> <span class="o">==</span> <span class="n">buts_ext</span><span class="p">:</span>             <span class="c1"># match nul</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx_ext</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>                                  <span class="c1"># victoire extérieur</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx_ext</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">3</span>
+
+    <span class="c1"># On trie par points décroissants (méthode pandas vue en cours)</span>
+    <span class="n">classement</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;equipe&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)),</span> <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="n">points</span><span class="p">})</span>
+    <span class="n">classement</span> <span class="o">=</span> <span class="n">classement</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;points&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">classement</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">classement</span><span class="o">.</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># On range la position de chaque équipe dans un tableau</span>
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">numero_equipe</span> <span class="o">=</span> <span class="n">classement</span><span class="p">[</span><span class="s1">&#39;equipe&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">positions</span><span class="p">[</span><span class="n">numero_equipe</span><span class="p">]</span> <span class="o">=</span> <span class="n">classement</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">positions</span></div>
+
+
+
+<div class="viewcode-block" id="construire_index">
+<a class="viewcode-back" href="../../simulation.main_NEW.html#simulation.main_NEW.construire_index">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">construire_index</span><span class="p">(</span><span class="n">liste_chargeurs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construit un dictionnaire {nom: numéro} commun à plusieurs saisons.</span>
+
+<span class="sd">    Les équipes sont numérotées par ordre alphabétique (reproductible).</span>
+
+<span class="sd">    :param liste_chargeurs: liste d&#39;instances ChargeurDonnees déjà nettoyées.</span>
+<span class="sd">    :type liste_chargeurs: list</span>
+<span class="sd">    :return: dictionnaire {nom_equipe: numero}.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">noms</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">chargeur</span> <span class="ow">in</span> <span class="n">liste_chargeurs</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">get_equipes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">nom</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">noms</span><span class="p">:</span>                <span class="c1"># on évite les doublons</span>
+                <span class="n">noms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nom</span><span class="p">)</span>
+    <span class="n">noms</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">noms</span><span class="p">)</span>                         <span class="c1"># ordre alphabétique (reproductible)</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">noms</span><span class="p">)):</span>
+        <span class="n">index</span><span class="p">[</span><span class="n">noms</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="k">return</span> <span class="n">index</span></div>
+
+
+
+<div class="viewcode-block" id="simuler_saison">
+<a class="viewcode-back" href="../../simulation.main_NEW.html#simulation.main_NEW.simuler_saison">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simuler_saison</span><span class="p">(</span><span class="n">nom_saison</span><span class="p">,</span> <span class="n">n_simulations</span><span class="o">=</span><span class="mi">500</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calibre les poids, entraîne, approxime les promus, simule et compare au réel.</span>
+
+<span class="sd">    :param nom_saison: saison à simuler (clé de SAISONS, ex. &quot;2023-2024&quot;).</span>
+<span class="sd">    :type nom_saison: str</span>
+<span class="sd">    :param n_simulations: nombre de simulations Monte-Carlo.</span>
+<span class="sd">    :type n_simulations: int</span>
+<span class="sd">    :return: tuple (resultats, sim, index_saison) où resultats est le classement</span>
+<span class="sd">        simulé (DataFrame), sim le Simulateur utilisé et index_saison le dict {nom: index}.</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">info</span> <span class="o">=</span> <span class="n">SAISONS</span><span class="p">[</span><span class="n">nom_saison</span><span class="p">]</span>
+    <span class="n">fichiers_train</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;precedentes&quot;</span><span class="p">]</span>
+
+    <span class="c1"># --- ÉTAPE 0 : trouver le meilleur trio de poids ---</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Recherche du meilleur trio de pondération...&quot;</span><span class="p">)</span>
+    <span class="n">trio</span> <span class="o">=</span> <span class="n">trouver_meilleur_trio</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;train_valid&quot;</span><span class="p">],</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;validation&quot;</span><span class="p">])</span>
+    <span class="n">p1</span> <span class="o">=</span> <span class="n">trio</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">p2</span> <span class="o">=</span> <span class="n">trio</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">p3</span> <span class="o">=</span> <span class="n">trio</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Trio utilisé : </span><span class="si">{</span><span class="n">trio</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># --- ÉTAPE A : entraînement sur les 3 saisons précédentes ---</span>
+    <span class="n">c1</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="n">fichiers_train</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span> <span class="n">c1</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+    <span class="n">c2</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="n">fichiers_train</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span> <span class="n">c2</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+    <span class="n">c3</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="n">fichiers_train</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span> <span class="n">c3</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+
+    <span class="c1"># index commun aux 3 saisons d&#39;entraînement</span>
+    <span class="n">index_train</span> <span class="o">=</span> <span class="n">construire_index</span><span class="p">([</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">c3</span><span class="p">])</span>
+    <span class="n">n_train</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index_train</span><span class="p">)</span>
+
+    <span class="n">matchs_1</span> <span class="o">=</span> <span class="n">matchs_avec_index</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">index_train</span><span class="p">)</span>
+    <span class="n">matchs_2</span> <span class="o">=</span> <span class="n">matchs_avec_index</span><span class="p">(</span><span class="n">c2</span><span class="p">,</span> <span class="n">index_train</span><span class="p">)</span>
+    <span class="n">matchs_3</span> <span class="o">=</span> <span class="n">matchs_avec_index</span><span class="p">(</span><span class="n">c3</span><span class="p">,</span> <span class="n">index_train</span><span class="p">)</span>
+    <span class="n">matchs_tous</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">matchs_1</span><span class="p">,</span> <span class="n">matchs_2</span><span class="p">,</span> <span class="n">matchs_3</span><span class="p">])</span>
+
+    <span class="c1"># un poids par match selon sa saison</span>
+    <span class="n">poids_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">matchs_1</span><span class="p">))</span> <span class="o">*</span> <span class="n">p1</span>
+    <span class="n">poids_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">matchs_2</span><span class="p">))</span> <span class="o">*</span> <span class="n">p2</span>
+    <span class="n">poids_3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">matchs_3</span><span class="p">))</span> <span class="o">*</span> <span class="n">p3</span>
+    <span class="n">poids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">poids_1</span><span class="p">,</span> <span class="n">poids_2</span><span class="p">,</span> <span class="n">poids_3</span><span class="p">])</span>
+
+    <span class="n">modele</span> <span class="o">=</span> <span class="n">ModelePoisson</span><span class="p">(</span><span class="n">n_train</span><span class="p">)</span>
+    <span class="n">modele</span><span class="o">.</span><span class="n">entrainer</span><span class="p">(</span><span class="n">matchs_tous</span><span class="p">,</span> <span class="n">poids</span><span class="o">=</span><span class="n">poids</span><span class="p">)</span>
+    <span class="n">forces_train</span> <span class="o">=</span> <span class="n">modele</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+    <span class="n">avantage_train</span> <span class="o">=</span> <span class="n">modele</span><span class="o">.</span><span class="n">get_avantage_domicile</span><span class="p">()</span>
+
+    <span class="c1"># --- ÉTAPE B : déterminer les équipes de la saison cible ---</span>
+    <span class="c1"># Les promus sont déclarés manuellement (dans l&#39;ordre 1er, 2e, 3e promu).</span>
+    <span class="n">promus</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;promus&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;csv&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># saison déjà jouée : on lit son CSV pour avoir la liste exacte des 20 équipes</span>
+        <span class="n">c_cible</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;csv&quot;</span><span class="p">]);</span> <span class="n">c_cible</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+        <span class="n">equipes_cible</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">c_cible</span><span class="o">.</span><span class="n">get_equipes</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># saison future : équipes récentes - relégués + promus connus</span>
+        <span class="n">c_recente</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="n">fichiers_train</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span> <span class="n">c_recente</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+        <span class="n">relegues</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;relegues_futurs&quot;</span><span class="p">]</span>
+        <span class="n">equipes_cible</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">c_recente</span><span class="o">.</span><span class="n">get_equipes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">nom</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">relegues</span><span class="p">:</span>
+                <span class="n">equipes_cible</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nom</span><span class="p">)</span>
+        <span class="n">equipes_cible</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">equipes_cible</span> <span class="o">+</span> <span class="n">promus</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saison </span><span class="si">{</span><span class="n">nom_saison</span><span class="si">}</span><span class="s2"> -- </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">equipes_cible</span><span class="p">)</span><span class="si">}</span><span class="s2"> équipes&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Promus (manuels) : </span><span class="si">{</span><span class="n">promus</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># --- ÉTAPE C : construire forces / avantage / index de la saison cible ---</span>
+    <span class="n">forces_saison</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">avantage_saison</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">index_saison</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">numero</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">equipes_cible</span><span class="p">:</span>
+        <span class="c1"># une équipe est traitée comme promue si elle est dans la liste manuelle,</span>
+        <span class="c1"># MÊME si elle a déjà joué en PL avant (cas des équipes &quot;yo-yo&quot;)</span>
+        <span class="k">if</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">promus</span><span class="p">:</span>
+            <span class="c1"># équipe promue : on approxime via sa position cible.</span>
+            <span class="c1"># La fonction entraîne le modèle saison par saison (20 équipes propres),</span>
+            <span class="c1"># trouve l&#39;équipe la plus proche de la cible dans chaque saison, et moyenne.</span>
+            <span class="n">rang_promu</span> <span class="o">=</span> <span class="n">promus</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">nom</span><span class="p">)</span>             <span class="c1"># 0, 1 ou 2</span>
+            <span class="k">if</span> <span class="n">rang_promu</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">rang_promu</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="n">cible</span> <span class="o">=</span> <span class="n">POSITIONS_PROMUS</span><span class="p">[</span><span class="n">rang_promu</span><span class="p">]</span>
+            <span class="n">att</span><span class="p">,</span> <span class="n">defe</span><span class="p">,</span> <span class="n">av</span> <span class="o">=</span> <span class="n">forces_pour_position_cible</span><span class="p">(</span><span class="n">cible</span><span class="p">,</span> <span class="n">fichiers_train</span><span class="p">,</span> <span class="n">n_simulations</span><span class="p">)</span>
+            <span class="n">forces_saison</span><span class="p">[</span><span class="n">numero</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">att</span><span class="p">,</span> <span class="n">defe</span><span class="p">)</span>
+            <span class="n">avantage_saison</span><span class="p">[</span><span class="n">numero</span><span class="p">]</span> <span class="o">=</span> <span class="n">av</span>
+        <span class="k">elif</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">index_train</span><span class="p">:</span>
+            <span class="c1"># équipe connue (maintenue) : on copie ses forces apprises</span>
+            <span class="n">idx_t</span> <span class="o">=</span> <span class="n">index_train</span><span class="p">[</span><span class="n">nom</span><span class="p">]</span>
+            <span class="n">forces_saison</span><span class="p">[</span><span class="n">numero</span><span class="p">]</span> <span class="o">=</span> <span class="n">forces_train</span><span class="p">[</span><span class="n">idx_t</span><span class="p">]</span>
+            <span class="n">avantage_saison</span><span class="p">[</span><span class="n">numero</span><span class="p">]</span> <span class="o">=</span> <span class="n">avantage_train</span><span class="p">[</span><span class="n">idx_t</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># cas rare : équipe ni promue ni connue -&gt; on la traite comme un promu moyen</span>
+            <span class="n">att</span><span class="p">,</span> <span class="n">defe</span><span class="p">,</span> <span class="n">av</span> <span class="o">=</span> <span class="n">forces_pour_position_cible</span><span class="p">(</span><span class="mf">17.0</span><span class="p">,</span> <span class="n">fichiers_train</span><span class="p">,</span> <span class="n">n_simulations</span><span class="p">)</span>
+            <span class="n">forces_saison</span><span class="p">[</span><span class="n">numero</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">att</span><span class="p">,</span> <span class="n">defe</span><span class="p">)</span>
+            <span class="n">avantage_saison</span><span class="p">[</span><span class="n">numero</span><span class="p">]</span> <span class="o">=</span> <span class="n">av</span>
+        <span class="n">index_saison</span><span class="p">[</span><span class="n">nom</span><span class="p">]</span> <span class="o">=</span> <span class="n">numero</span>
+        <span class="n">numero</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># --- ÉTAPE D : simulation finale de la saison cible ---</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">Simulateur</span><span class="p">(</span><span class="n">forces_saison</span><span class="p">,</span> <span class="n">avantage_saison</span><span class="p">,</span> <span class="n">index_saison</span><span class="p">)</span>
+    <span class="n">resultats</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">simuler_monte_carlo</span><span class="p">(</span><span class="n">n_simulations</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- CLASSEMENT SIMULÉ ---&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">resultats</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+
+    <span class="c1"># --- ÉTAPE E : comparaison au réel si la saison a déjà été jouée ---</span>
+    <span class="k">if</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;csv&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_cible</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index_saison</span><span class="p">)</span>
+        <span class="n">positions_reelles</span> <span class="o">=</span> <span class="n">classement_reel</span><span class="p">(</span><span class="n">c_cible</span><span class="p">,</span> <span class="n">index_saison</span><span class="p">,</span> <span class="n">n_cible</span><span class="p">)</span>
+
+        <span class="c1"># position simulée de chaque équipe (resultats est trié par position moyenne)</span>
+        <span class="n">position_simulee</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">rang</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">resultats</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">position_simulee</span><span class="p">[</span><span class="n">nom</span><span class="p">]</span> <span class="o">=</span> <span class="n">rang</span>
+            <span class="n">rang</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- COMPARAISON SIMULÉ vs RÉEL ---&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;Équipe&#39;</span><span class="si">:</span><span class="s2">&lt;20</span><span class="si">}{</span><span class="s1">&#39;Simulé&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}{</span><span class="s1">&#39;Réel&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}{</span><span class="s1">&#39;Écart&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">44</span><span class="p">)</span>
+        <span class="c1"># on affiche dans l&#39;ordre du classement réel : on parcourt les positions 1 à n</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_cible</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">index_saison</span><span class="p">:</span>                   <span class="c1"># on cherche l&#39;équipe à cette position</span>
+                <span class="k">if</span> <span class="n">positions_reelles</span><span class="p">[</span><span class="n">index_saison</span><span class="p">[</span><span class="n">nom</span><span class="p">]]</span> <span class="o">==</span> <span class="n">position</span><span class="p">:</span>
+                    <span class="n">pos_sim</span> <span class="o">=</span> <span class="n">position_simulee</span><span class="p">[</span><span class="n">nom</span><span class="p">]</span>
+                    <span class="n">pos_reel</span> <span class="o">=</span> <span class="n">position</span>
+                    <span class="n">ecart</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pos_sim</span> <span class="o">-</span> <span class="n">pos_reel</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">nom</span><span class="si">:</span><span class="s2">&lt;20</span><span class="si">}{</span><span class="n">pos_sim</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}{</span><span class="n">pos_reel</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}{</span><span class="n">ecart</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">(Saison future : pas de classement réel pour comparer.)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># on renvoie aussi le simulateur et l&#39;index pour pouvoir tracer les graphiques</span>
+    <span class="k">return</span> <span class="n">resultats</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">index_saison</span></div>
+
+
+
+<span class="c1"># ----------------------------------------------------------------------</span>
+<span class="c1"># 4. PROGRAMME PRINCIPAL</span>
+<span class="c1"># ----------------------------------------------------------------------</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c1"># 1. On affiche les saisons disponibles</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Saisons disponibles :&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">SAISONS</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">SAISONS</span><span class="p">[</span><span class="n">nom</span><span class="p">][</span><span class="s2">&quot;csv&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">nom</span><span class="si">}</span><span class="s2"> (future)&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">nom</span><span class="si">}</span><span class="s2"> (déjà jouée)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># 2. On demande une saison valide (fonction du module validation_saisie)</span>
+    <span class="n">saison_selectionnee</span> <span class="o">=</span> <span class="n">demander_saison</span><span class="p">(</span>
+        <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Quelle saison voulez-vous simuler ? (ex: 2023-2024) : &quot;</span><span class="p">,</span> <span class="n">SAISONS</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 3. On demande le nombre de simulations (entier positif contrôlé)</span>
+    <span class="n">nb_simulations</span> <span class="o">=</span> <span class="n">demander_entier_positif</span><span class="p">(</span><span class="s2">&quot;Combien de simulations voulez-vous effectuer ? (ex: 500) : &quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Lancement de la simulation pour </span><span class="si">{</span><span class="n">saison_selectionnee</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">nb_simulations</span><span class="si">}</span><span class="s2"> simulations)...&quot;</span><span class="p">)</span>
+    <span class="c1"># on chronomètre : on passe simuler_saison à mesurer</span>
+    <span class="n">resultats</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">index_saison</span><span class="p">,</span> <span class="n">duree</span> <span class="o">=</span> <span class="n">chrono_simulation</span><span class="p">(</span><span class="n">simuler_saison</span><span class="p">,</span> <span class="n">saison_selectionnee</span><span class="p">,</span> <span class="n">nb_simulations</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">duree</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">nb_simulations</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1000</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> ms par simulation Monte-Carlo)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># GRAPHIQUES (on réutilise la classe Visualiseur)</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># On affiche la liste des équipes avec leur sigle officiel</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Équipes de cette saison :&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">index_saison</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+        <span class="n">sigle</span> <span class="o">=</span> <span class="n">SIGLES</span><span class="p">[</span><span class="n">nom</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">sigle</span><span class="si">:</span><span class="s2">&lt;5</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="n">nom</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># dictionnaire {sigle: nom} pour retrouver le nom complet depuis le sigle</span>
+    <span class="n">sigle_vers_nom</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">nom</span> <span class="ow">in</span> <span class="n">index_saison</span><span class="p">:</span>
+        <span class="n">sigle_vers_nom</span><span class="p">[</span><span class="n">SIGLES</span><span class="p">[</span><span class="n">nom</span><span class="p">]]</span> <span class="o">=</span> <span class="n">nom</span>
+
+    <span class="c1"># 4. On demande un sigle officiel valide (fonction du module validation_saisie)</span>
+    <span class="n">equipe</span> <span class="o">=</span> <span class="n">demander_sigle</span><span class="p">(</span>
+        <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Quelle équipe détailler ? (sigle officiel, ex: ARS) : &quot;</span><span class="p">,</span> <span class="n">sigle_vers_nom</span>
+    <span class="p">)</span>
+
+    <span class="n">visu</span> <span class="o">=</span> <span class="n">Visualiseur</span><span class="p">(</span><span class="n">resultats</span><span class="p">)</span>
+    <span class="n">visu</span><span class="o">.</span><span class="n">graphique_probabilites_titre</span><span class="p">()</span>
+    <span class="n">visu</span><span class="o">.</span><span class="n">graphique_classement_moyen</span><span class="p">()</span>
+    <span class="n">visu</span><span class="o">.</span><span class="n">graphique_distribution_points</span><span class="p">(</span><span class="n">equipe</span><span class="p">,</span> <span class="n">simulateur</span><span class="o">=</span><span class="n">sim</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Modules</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

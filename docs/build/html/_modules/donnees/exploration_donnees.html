@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>donnees.exploration_donnees &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Recherche" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de donnees.exploration_donnees</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;exploration_donnees.py — Exploration de la base de données complète de la Premier League.</span>
+<span class="sd">Auteurs : Fabien — Loïc - Guillaume - Projet MGA802 Groupe 2</span>
+
+<span class="sd">Ce script produit une grille MultiIndex par saison (visualisation de tous les matchs),</span>
+<span class="sd">les statistiques consolidées par équipe et un résumé des tableaux NumPy que get_matchs()</span>
+<span class="sd">fournit au modèle. Les données sont aussi affichées via print pour repérer visuellement</span>
+<span class="sd">d&#39;éventuels problèmes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.donnees</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChargeurDonnees</span> <span class="c1">#on importe la classe qu&#39;on a codée qui est dans le même dossier</span>
+
+<span class="n">SOUS_COLONNES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;journee&quot;</span><span class="p">,</span> <span class="s2">&quot;buts_dom&quot;</span><span class="p">,</span> <span class="s2">&quot;buts_ext&quot;</span><span class="p">,</span> <span class="s2">&quot;resultat&quot;</span><span class="p">,</span>     <span class="c1">#sous-colonnes affichées dans chaque case de la grille</span>
+                 <span class="s2">&quot;pts_dom&quot;</span><span class="p">,</span> <span class="s2">&quot;pts_ext&quot;</span><span class="p">,</span> <span class="s2">&quot;diff_buts&quot;</span><span class="p">,</span> <span class="s2">&quot;total_buts&quot;</span><span class="p">]</span>
+
+<span class="n">FICHIERS</span> <span class="o">=</span> <span class="p">{</span>                         <span class="c1">#les 8 fichiers CSV à charger</span>
+    <span class="s2">&quot;2018-2019&quot;</span><span class="p">:</span> <span class="s2">&quot;2018-2019.csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;2019-2020&quot;</span><span class="p">:</span> <span class="s2">&quot;2019-2020.csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;2020-2021&quot;</span><span class="p">:</span> <span class="s2">&quot;2020-2021.csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;2021-2022&quot;</span><span class="p">:</span> <span class="s2">&quot;2021-2022.csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;2022-2023&quot;</span><span class="p">:</span> <span class="s2">&quot;2022-2023.csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;2023-2024&quot;</span><span class="p">:</span> <span class="s2">&quot;2023-2024.csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;2024-2025&quot;</span><span class="p">:</span> <span class="s2">&quot;2024-2025.csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;2025-2026&quot;</span><span class="p">:</span> <span class="s2">&quot;2025-2026.csv&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="get_toutes_les_equipes">
+<a class="viewcode-back" href="../../donnees.exploration_donnees.html#donnees.exploration_donnees.get_toutes_les_equipes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_toutes_les_equipes</span><span class="p">(</span><span class="n">fichiers</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retourne la liste triée de TOUTES les équipes présentes sur les 8 saisons (union).</span>
+
+<span class="sd">    :param fichiers: dictionnaire {label_saison: nom_fichier_csv}.</span>
+<span class="sd">    :type fichiers: dict</span>
+<span class="sd">    :return: liste triée des équipes présentes sur l&#39;ensemble des saisons.</span>
+<span class="sd">    :rtype: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">toutes_les_equipes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>      <span class="c1">#ensemble vide pour stocker toutes les équipes uniques</span>
+
+    <span class="k">for</span> <span class="n">fichier</span> <span class="ow">in</span> <span class="n">fichiers</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>  <span class="c1">#on parcourt chaque fichier CSV</span>
+        <span class="n">df_temp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../donnees/&#39;</span> <span class="o">+</span> <span class="n">fichier</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8-sig&#39;</span><span class="p">)</span>
+        <span class="n">equipes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df_temp</span><span class="p">[</span><span class="s1">&#39;HomeTeam&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">df_temp</span><span class="p">[</span><span class="s1">&#39;AwayTeam&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>    <span class="c1">#union domicile + extérieur</span>
+        <span class="n">toutes_les_equipes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">equipes</span><span class="p">)</span>     <span class="c1">#on ajoute l&#39;ensemble de cette saison à l&#39;ensemble global (Union)</span>
+
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">toutes_les_equipes</span><span class="p">)</span>        <span class="c1">#sorted() trie alphabétiquement et renvoie une liste</span></div>
+
+
+
+<span class="n">TOUTES_LES_EQUIPES</span> <span class="o">=</span> <span class="n">get_toutes_les_equipes</span><span class="p">(</span><span class="n">FICHIERS</span><span class="p">)</span>
+
+<div class="viewcode-block" id="construire_grille">
+<a class="viewcode-back" href="../../donnees.exploration_donnees.html#donnees.exploration_donnees.construire_grille">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">construire_grille</span><span class="p">(</span><span class="n">chargeur</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construit la grille MultiIndex des matchs à partir d&#39;un ChargeurDonnees nettoyé.</span>
+
+<span class="sd">    En colonnes : MultiIndex (equipe_domicile, sous_colonne). En lignes :</span>
+<span class="sd">    equipe_exterieure. Chaque case (ext, dom) décrit le match joué entre ces deux</span>
+<span class="sd">    équipes ; la diagonale reste vide (une équipe ne joue pas contre elle-même).</span>
+
+<span class="sd">    :param chargeur: instance déjà chargée et nettoyée.</span>
+<span class="sd">    :type chargeur: ChargeurDonnees</span>
+<span class="sd">    :return: DataFrame avec un MultiIndex en colonnes.</span>
+<span class="sd">    :rtype: pandas.DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">equipes</span> <span class="o">=</span> <span class="n">TOUTES_LES_EQUIPES</span>    <span class="c1">#on force TOUTES les équipes présentes sur les 8 saisons</span>
+    <span class="n">index_eq</span> <span class="o">=</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">get_index_equipes</span><span class="p">()</span>   <span class="c1">#{nom: numéro} pour retrouver l&#39;index</span>
+
+    <span class="n">colonnes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="o">.</span><span class="n">from_product</span><span class="p">([</span><span class="n">equipes</span><span class="p">,</span> <span class="n">SOUS_COLONNES</span><span class="p">],</span>      <span class="c1">#pd.MultiIndex.from_product crée toutes les combinaisons (equipe × sous-colonne)</span>
+                                          <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Domicile&quot;</span><span class="p">,</span> <span class="s2">&quot;info&quot;</span><span class="p">])</span>
+    <span class="n">grille</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">equipes</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">colonnes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>       <span class="c1">#DataFrame vide : lignes = équipes extérieures &amp; colonnes = MultiIndex</span>
+    <span class="n">grille</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Exterieur&quot;</span>
+
+    <span class="n">matchs_numpy</span> <span class="o">=</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">get_matchs</span><span class="p">()</span>      <span class="c1">#on récupère le tableau NumPy : [idx_dom, idx_ext, buts_dom, buts_ext]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">donnees</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;Date&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1">#besoin des dates pour calculer les journées, on va trier le DataFrame interne par date pour numéroter les journées</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;HomeTeam&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">TOUTES_LES_EQUIPES</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;AwayTeam&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">TOUTES_LES_EQUIPES</span><span class="p">)]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>   <span class="c1">#on filtre les matchs, et on reset l&#39;index après le filtre</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;journee&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>   <span class="c1">#on recalcule journee sur les matchs filtrés uniquement</span>
+    <span class="n">noms</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">index_eq</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>     <span class="c1">#dictionnaire inverse {numéro: nom} pour retrouver les noms depuis les index NumPy</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ligne</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>   <span class="c1">#on parcourt chaque match du DataFrame trié</span>
+        <span class="n">dom</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;HomeTeam&#39;</span><span class="p">]</span> <span class="c1">#nom de l&#39;équipe à domicile</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;AwayTeam&#39;</span><span class="p">]</span>    <span class="c1">#nom de l&#39;équipe à l&#39;extérieur</span>
+        <span class="n">bd</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;FTHG&#39;</span><span class="p">]</span>     <span class="c1">#buts domicile</span>
+        <span class="n">be</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;FTAG&#39;</span><span class="p">]</span>    <span class="c1">#buts extérieur</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">ligne</span><span class="p">[</span><span class="s1">&#39;journee&#39;</span><span class="p">]</span>     <span class="c1">#numéro de journée calculé</span>
+
+        <span class="k">if</span> <span class="n">bd</span> <span class="o">&gt;</span> <span class="n">be</span><span class="p">:</span>        <span class="c1">#résultat du point de vue de l&#39;équipe à domicile</span>
+            <span class="n">res</span><span class="p">,</span> <span class="n">pts_dom</span><span class="p">,</span> <span class="n">pts_ext</span> <span class="o">=</span> <span class="s2">&quot;V&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span>  <span class="c1">#victoire à domicile</span>
+        <span class="k">elif</span> <span class="n">bd</span> <span class="o">==</span> <span class="n">be</span><span class="p">:</span>
+            <span class="n">res</span><span class="p">,</span> <span class="n">pts_dom</span><span class="p">,</span> <span class="n">pts_ext</span> <span class="o">=</span> <span class="s2">&quot;N&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span>   <span class="c1">#match nul</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">res</span><span class="p">,</span> <span class="n">pts_dom</span><span class="p">,</span> <span class="n">pts_ext</span> <span class="o">=</span> <span class="s2">&quot;D&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span>     <span class="c1">#défaite à domicile</span>
+
+        <span class="n">valeurs</span> <span class="o">=</span> <span class="p">{</span>                    <span class="c1">#on remplit la case (ext, dom) de la grille</span>
+            <span class="s2">&quot;journee&quot;</span><span class="p">:</span> <span class="n">j</span><span class="p">,</span>
+            <span class="s2">&quot;buts_dom&quot;</span><span class="p">:</span> <span class="n">bd</span><span class="p">,</span>
+            <span class="s2">&quot;buts_ext&quot;</span><span class="p">:</span> <span class="n">be</span><span class="p">,</span>
+            <span class="s2">&quot;resultat&quot;</span><span class="p">:</span> <span class="n">res</span><span class="p">,</span>
+            <span class="s2">&quot;pts_dom&quot;</span><span class="p">:</span> <span class="n">pts_dom</span><span class="p">,</span>
+            <span class="s2">&quot;pts_ext&quot;</span><span class="p">:</span> <span class="n">pts_ext</span><span class="p">,</span>
+            <span class="s2">&quot;diff_buts&quot;</span><span class="p">:</span> <span class="n">bd</span> <span class="o">-</span> <span class="n">be</span><span class="p">,</span>   <span class="c1">#différence de buts</span>
+            <span class="s2">&quot;total_buts&quot;</span><span class="p">:</span> <span class="n">bd</span> <span class="o">+</span> <span class="n">be</span><span class="p">,</span>     <span class="c1">#total de buts dans le match</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">valeurs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">grille</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ext</span><span class="p">,</span> <span class="p">(</span><span class="n">dom</span><span class="p">,</span> <span class="n">col</span><span class="p">)]</span> <span class="o">=</span> <span class="n">val</span>   <span class="c1">#.loc[ligne, (col_niv1, col_niv2)]</span>
+
+    <span class="k">return</span> <span class="n">grille</span></div>
+
+
+
+<div class="viewcode-block" id="afficher_stats_equipes">
+<a class="viewcode-back" href="../../donnees.exploration_donnees.html#donnees.exploration_donnees.afficher_stats_equipes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">afficher_stats_equipes</span><span class="p">(</span><span class="n">chargeur</span><span class="p">,</span> <span class="n">saison</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Affiche les statistiques de buts moyens par équipe pour une saison donnée.</span>
+
+<span class="sd">    Ce sont les données que le modèle utilisera pour s&#39;initialiser.</span>
+
+<span class="sd">    :param chargeur: instance déjà nettoyée.</span>
+<span class="sd">    :type chargeur: ChargeurDonnees</span>
+<span class="sd">    :param saison: label de la saison, ex. &quot;2023-2024&quot;.</span>
+<span class="sd">    :type saison: str</span>
+<span class="sd">    :return: rien ; affiche les statistiques dans la console.</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">statistiques_equipes</span><span class="p">()</span>    <span class="c1">#DataFrame buts_marques_moy / buts_encaisses_moy</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Statistiques par équipe à la saison </span><span class="si">{</span><span class="n">saison</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">stats</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="afficher_resume_numpy">
+<a class="viewcode-back" href="../../donnees.exploration_donnees.html#donnees.exploration_donnees.afficher_resume_numpy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">afficher_resume_numpy</span><span class="p">(</span><span class="n">chargeur</span><span class="p">,</span> <span class="n">saison</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Affiche un aperçu du tableau NumPy que get_matchs() fournit au modèle.</span>
+
+<span class="sd">    Le format de chaque ligne est [index_dom, index_ext, buts_dom, buts_ext].</span>
+
+<span class="sd">    :param chargeur: instance déjà nettoyée.</span>
+<span class="sd">    :type chargeur: ChargeurDonnees</span>
+<span class="sd">    :param saison: label de la saison, ex. &quot;2023-2024&quot;.</span>
+<span class="sd">    :type saison: str</span>
+<span class="sd">    :return: rien ; affiche l&#39;aperçu dans la console.</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">matchs</span> <span class="o">=</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">get_matchs</span><span class="p">()</span>     <span class="c1">#tableau NumPy (380, 4)</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">chargeur</span><span class="o">.</span><span class="n">get_index_equipes</span><span class="p">()</span>
+
+    <span class="n">noms</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">index</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>   <span class="c1">#dictionnaire inverse pour afficher les noms à côté des index</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Tableau NumPy get_matchs() à la saison </span><span class="si">{</span><span class="n">saison</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Shape : </span><span class="si">{</span><span class="n">matchs</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">  avec le format : [idx_dom, idx_ext, buts_dom, buts_ext]&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;5 premières lignes :&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">ligne</span> <span class="ow">in</span> <span class="n">matchs</span><span class="p">[:</span><span class="mi">5</span><span class="p">]:</span>    <span class="c1">#on affiche les 5 premières lignes</span>
+        <span class="n">idx_d</span><span class="p">,</span> <span class="n">idx_e</span><span class="p">,</span> <span class="n">bd</span><span class="p">,</span> <span class="n">be</span> <span class="o">=</span> <span class="n">ligne</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [</span><span class="si">{</span><span class="n">idx_d</span><span class="si">:</span><span class="s2">2d</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">idx_e</span><span class="si">:</span><span class="s2">2d</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">bd</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">be</span><span class="si">}</span><span class="s2">]&quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;  →  </span><span class="si">{</span><span class="n">noms</span><span class="p">[</span><span class="n">idx_d</span><span class="p">]</span><span class="si">:</span><span class="s2">&lt;20</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">noms</span><span class="p">[</span><span class="n">idx_e</span><span class="p">]</span><span class="si">:</span><span class="s2">&lt;20</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">bd</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">be</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">&quot;display.max_columns&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>      <span class="c1">#options d&#39;affichage Pandas pour voir toutes les colonnes</span>
+
+    <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">&quot;display.width&quot;</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+    <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">&quot;display.max_rows&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">chargeurs</span> <span class="o">=</span> <span class="p">{}</span>    <span class="c1">#on stocke les chargeurs pour la consolidation finale</span>
+
+    <span class="k">for</span> <span class="n">saison</span><span class="p">,</span> <span class="n">fichier</span> <span class="ow">in</span> <span class="n">FICHIERS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  SAISON </span><span class="si">{</span><span class="n">saison</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+
+        <span class="n">c</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="n">fichier</span><span class="p">)</span>        <span class="c1">#chargement et nettoyage via la classe ChargeurDonnees</span>
+
+        <span class="n">c</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+        <span class="n">chargeurs</span><span class="p">[</span><span class="n">saison</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span>    <span class="c1">#on garde l&#39;instance pour la consolidation</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get_equipes</span><span class="p">())</span><span class="si">}</span><span class="s2"> équipes : </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">get_equipes</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Correspondance nom --&gt; index : </span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">get_index_equipes</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- Grille complète des matchs (saison </span><span class="si">{</span><span class="n">saison</span><span class="si">}</span><span class="s2">) ---</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">grille</span> <span class="o">=</span> <span class="n">construire_grille</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>    <span class="c1">#grille MultiIndex complète de la saison</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">grille</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;---&quot;</span><span class="p">))</span>         <span class="c1">#.fillna(&quot;---&quot;) remplace les cases vides par &quot;---&quot;</span>
+
+        <span class="n">n</span> <span class="o">=</span> <span class="n">grille</span><span class="o">.</span><span class="n">xs</span><span class="p">(</span><span class="s2">&quot;journee&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>          <span class="c1">#nombre de matchs vérifiés dans la grille</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Matchs dans la grille : </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get_matchs</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">afficher_stats_equipes</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">saison</span><span class="p">)</span>          <span class="c1">#statistiques par équipe</span>
+        <span class="n">afficher_resume_numpy</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">saison</span><span class="p">)</span>         <span class="c1">#aperçu du tableau NumPy</span>
+
+
+    <span class="c1">#Par la suite, les données vont être consolidées sur 8 saisons</span>
+    <span class="c1"># Ce sera utile pour entraîner le modèle sur plusieurs saisons à la fois</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  DONNÉES CONSOLIDÉES SUR LES 8 SAISONS COMBINÉES&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+
+    <span class="n">c_tout</span> <span class="o">=</span> <span class="n">ChargeurDonnees</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">FICHIERS</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>    <span class="c1">#on charge les 8 saisons d&#39;un coup avec la liste de chemins</span>
+
+    <span class="n">c_tout</span><span class="o">.</span><span class="n">nettoyer</span><span class="p">()</span>
+
+    <span class="n">matchs_tout</span> <span class="o">=</span> <span class="n">c_tout</span><span class="o">.</span><span class="n">get_matchs</span><span class="p">()</span>    <span class="c1">#tableau NumPy</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Tableau NumPy consolidé : </span><span class="si">{</span><span class="n">matchs_tout</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">TOUTES_LES_EQUIPES</span><span class="p">)</span><span class="si">}</span><span class="s2"> équipes uniques sur 8 saisons)&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Équipes uniques : </span><span class="si">{</span><span class="n">TOUTES_LES_EQUIPES</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Statistiques consolidées par équipe (moyennes sur 8 saisons) :&quot;</span><span class="p">)</span>     <span class="c1">#statistiques consolidées moyennes sur les 8 saisons</span>
+
+    <span class="n">stats_tout</span> <span class="o">=</span> <span class="n">c_tout</span><span class="o">.</span><span class="n">statistiques_equipes</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">stats_tout</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+
+    <span class="n">c_tout</span><span class="o">.</span><span class="n">sauvegarder</span><span class="p">(</span><span class="s2">&quot;matchs_consolides.pkl&quot;</span><span class="p">)</span>       <span class="c1">#sauvegarde des données consolidées en pickle</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Modules</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

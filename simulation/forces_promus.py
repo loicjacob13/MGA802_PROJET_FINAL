@@ -1,6 +1,5 @@
 """
 forces_promus.py — Approxime les forces des équipes promues.
-Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
 
 PRINCIPE :
 Une équipe promue n'a pas joué en Premier League, donc le modèle ne connaît pas ses
@@ -23,7 +22,17 @@ from simulation.simulateur import Simulateur
 
 
 def equipe_la_plus_proche(resultats, position_cible):
-    """Renvoie le NOM de l'équipe dont la position moyenne est la plus proche de la cible."""
+    """
+    Renvoie le nom de l'équipe dont la position moyenne est la plus proche de la cible.
+
+    :param resultats: classement simulé contenant une colonne 'position_moyenne',
+        indexé par nom d'équipe.
+    :type resultats: pandas.DataFrame
+    :param position_cible: position visée (ex. 15.0).
+    :type position_cible: float
+    :return: nom de l'équipe la plus proche de la position cible.
+    :rtype: str
+    """
     ecarts = (resultats['position_moyenne'] - position_cible).abs()   # écart à la cible
     nom_plus_proche = ecarts.sort_values().index[0]                   # la 1ère = la plus proche
     return nom_plus_proche
@@ -31,11 +40,16 @@ def equipe_la_plus_proche(resultats, position_cible):
 
 def forces_d_une_saison(fichier_csv, n_simulations):
     """
-    Entraîne le modèle sur UNE seule saison, simule, et renvoie :
-      - resultats   : le classement simulé (DataFrame)
-      - forces      : dict {index: (attaque, defense)}
-      - avantages   : dict {index: avantage_domicile}
-      - index       : dict {nom: index}
+    Entraîne le modèle sur une seule saison, simule, et renvoie ses forces.
+
+    :param fichier_csv: chemin du CSV de la saison.
+    :type fichier_csv: str
+    :param n_simulations: nombre de simulations Monte-Carlo.
+    :type n_simulations: int
+    :return: tuple (resultats, forces, avantages, index) où resultats est le classement
+        simulé (DataFrame), forces le dict {index: (attaque, defense)}, avantages le
+        dict {index: avantage_domicile} et index le dict {nom: index}.
+    :rtype: tuple
     """
     c = ChargeurDonnees(fichier_csv)
     c.nettoyer()
@@ -56,12 +70,17 @@ def forces_pour_position_cible(position_cible, fichiers_saisons, n_simulations=3
     """
     Approxime (attaque, defense, avantage) d'un promu pour une position cible donnée.
 
-    - position_cible  : la position visée (ex 15.0, 16.9, 17.4)
-    - fichiers_saisons: liste des 3 CSV des saisons d'entraînement
-    - n_simulations   : nombre de simulations Monte-Carlo par saison
-
     Pour chaque saison : on trouve l'équipe la plus proche de la cible et on prend ses
     forces. On moyenne ensuite sur les 3 saisons.
+
+    :param position_cible: position visée (ex. 15.0, 16.9, 17.4).
+    :type position_cible: float
+    :param fichiers_saisons: liste des 3 CSV des saisons d'entraînement.
+    :type fichiers_saisons: list
+    :param n_simulations: nombre de simulations Monte-Carlo par saison.
+    :type n_simulations: int
+    :return: tuple (attaque_moyenne, defense_moyenne, avantage_moyen).
+    :rtype: tuple
     """
     attaques = []
     defenses = []

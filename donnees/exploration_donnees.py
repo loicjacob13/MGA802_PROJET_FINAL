@@ -1,9 +1,10 @@
-"""exploration_donnees.py est le fichier pour l'exploration dans la base de données complète de la Premier League
+"""exploration_donnees.py — Exploration de la base de données complète de la Premier League.
 Auteurs : Fabien — Loïc - Guillaume - Projet MGA802 Groupe 2
-Ce script produit ne grille MultiIndex par saison (visualisation de tous les matchs)
-ainsi que les statistiques consolidées par équipe et un résumé des tableaux NumPy
-que get_matchs() fournit au modèle
-on va aussi afficher les donnes en print pour visuellement voir nous même s'il y a des problèmes
+
+Ce script produit une grille MultiIndex par saison (visualisation de tous les matchs),
+les statistiques consolidées par équipe et un résumé des tableaux NumPy que get_matchs()
+fournit au modèle. Les données sont aussi affichées via print pour repérer visuellement
+d'éventuels problèmes.
 """
 
 import pandas as pd
@@ -26,10 +27,12 @@ FICHIERS = {                         #les 8 fichiers CSV à charger
 
 def get_toutes_les_equipes(fichiers):
     """
-    Retourne la liste triée de TOUTES les équipes présentes sur les 8 saisons
-    des CSVs (Union au lieu d'intersection)
-    Les paramètres sont les fichiers csv et la fonction retourne
-    la liste des équipes présentes sur l'ensemble des saisons
+    Retourne la liste triée de TOUTES les équipes présentes sur les 8 saisons (union).
+
+    :param fichiers: dictionnaire {label_saison: nom_fichier_csv}.
+    :type fichiers: dict
+    :return: liste triée des équipes présentes sur l'ensemble des saisons.
+    :rtype: list
     """
     toutes_les_equipes = set()      #ensemble vide pour stocker toutes les équipes uniques
 
@@ -45,13 +48,16 @@ TOUTES_LES_EQUIPES = get_toutes_les_equipes(FICHIERS)
 
 def construire_grille(chargeur):
     """
-    Construit la grille MultiIndex à partir d'un ChargeurDonnees déjà nettoyé
-    En colonnes : MultiIndex (equipe_domicile, sous_colonne)
-    Pour les lignes : equipe_exterieure
-    Chaque case (ext, dom) décrit le match joué entre ces deux équipes
-    La diagonale reste vide (une équipe ne joue pas contre elle-même)
-    Les paramètres sont chargeur (ChargeurDonnees) : instance déjà chargée et nettoyée
-    La fonciton retourne un pandas.DataFrame avec MultiIndex en colonnes
+    Construit la grille MultiIndex des matchs à partir d'un ChargeurDonnees nettoyé.
+
+    En colonnes : MultiIndex (equipe_domicile, sous_colonne). En lignes :
+    equipe_exterieure. Chaque case (ext, dom) décrit le match joué entre ces deux
+    équipes ; la diagonale reste vide (une équipe ne joue pas contre elle-même).
+
+    :param chargeur: instance déjà chargée et nettoyée.
+    :type chargeur: ChargeurDonnees
+    :return: DataFrame avec un MultiIndex en colonnes.
+    :rtype: pandas.DataFrame
     """
     equipes = TOUTES_LES_EQUIPES    #on force TOUTES les équipes présentes sur les 8 saisons
     index_eq = chargeur.get_index_equipes()   #{nom: numéro} pour retrouver l'index
@@ -100,10 +106,16 @@ def construire_grille(chargeur):
 
 def afficher_stats_equipes(chargeur, saison):
     """
-    Cette fonction affiche les statistiques de buts moyens par équipe pour une
-    saison donnée. Ce sont les données que le modèle utilisera pour s'initialiser.
-    Ses paramètres sont chargeur (ChargeurDonnees) : instance déjà nettoyée
-       &  saison (str) : label de la saison, ex. "2023-2024"
+    Affiche les statistiques de buts moyens par équipe pour une saison donnée.
+
+    Ce sont les données que le modèle utilisera pour s'initialiser.
+
+    :param chargeur: instance déjà nettoyée.
+    :type chargeur: ChargeurDonnees
+    :param saison: label de la saison, ex. "2023-2024".
+    :type saison: str
+    :return: rien ; affiche les statistiques dans la console.
+    :rtype: None
     """
     stats = chargeur.statistiques_equipes()    #DataFrame buts_marques_moy / buts_encaisses_moy
 
@@ -112,9 +124,16 @@ def afficher_stats_equipes(chargeur, saison):
 
 def afficher_resume_numpy(chargeur, saison):
     """
-    Affiche un aperçu du tableau NumPy que get_matchs() fournit au modèle après
-    Le format est le suivant [index_dom, index_ext, buts_dom, buts_ext]
-    les paramètres sont chargeur & saison
+    Affiche un aperçu du tableau NumPy que get_matchs() fournit au modèle.
+
+    Le format de chaque ligne est [index_dom, index_ext, buts_dom, buts_ext].
+
+    :param chargeur: instance déjà nettoyée.
+    :type chargeur: ChargeurDonnees
+    :param saison: label de la saison, ex. "2023-2024".
+    :type saison: str
+    :return: rien ; affiche l'aperçu dans la console.
+    :rtype: None
     """
     matchs = chargeur.get_matchs()     #tableau NumPy (380, 4)
     index = chargeur.get_index_equipes()
@@ -129,6 +148,7 @@ def afficher_resume_numpy(chargeur, saison):
         idx_d, idx_e, bd, be = ligne
         print(f"  [{idx_d:2d}, {idx_e:2d}, {bd}, {be}]"
               f"  →  {noms[idx_d]:<20} vs {noms[idx_e]:<20}  {bd}-{be}")
+
 
 if __name__ == "__main__":
 

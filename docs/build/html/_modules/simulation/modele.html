@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>simulation.modele &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Recherche" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de simulation.modele</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">modele.py — Modèle de Poisson pour estimer les forces des équipes.</span>
+<span class="sd">Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</span>
+
+<span class="sd">Le modèle apprend une force d&#39;attaque et de défense par équipe, plus un avantage</span>
+<span class="sd">à domicile, en minimisant une perte de type Poisson sur les matchs passés.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+
+<div class="viewcode-block" id="ModelePoisson">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ModelePoisson</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Modèle de Poisson qui apprend les forces (attaque/défense) des équipes.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_equipes</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialise les paramètres du modèle dans un seul vecteur plat (pour scipy).</span>
+
+<span class="sd">        :param n_equipes: nombre d&#39;équipes différentes.</span>
+<span class="sd">        :type n_equipes: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span> <span class="o">=</span> <span class="n">n_equipes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">n_equipes</span><span class="p">)</span>
+        <span class="c1">#le vecteur params consiste à appliquer une donnée force d&#39;attaque et une donnée force défense et 1 avnatage domicile qui sera commun à tous</span>
+        <span class="c1">#ici, il y a 3 équipes didérentes donc le vecteur params prendra juste 7 termes car le facteur de jouer à domicile est jugé uniforme à tous</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index_equipes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">matchs</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="ModelePoisson.charger_depuis_grille">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.charger_depuis_grille">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">charger_depuis_grille</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grille</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Lit la grille MultiIndex et en extrait les matchs exploitables.</span>
+
+<span class="sd">        :param grille: grille MultiIndex (format pandas) contenant les matchs.</span>
+<span class="sd">        :type grille: pandas.DataFrame</span>
+<span class="sd">        :return: tableau des matchs au format [idx_dom, idx_ext, buts_dom, buts_ext].</span>
+<span class="sd">        :rtype: numpy.ndarray</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">matchs</span> <span class="o">=</span> <span class="n">grille</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="s2">&quot;Domicile&quot;</span><span class="p">,</span> <span class="n">future_stack</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1">#ligne de code non trouvée en cours, mais qui va permettre d&#39;étirer un tableau, pour le mettre sous format d&#39;une ligne</span>
+        <span class="c1">#future_stack=True permet d&#39;utiliser version moderne de panda</span>
+        <span class="c1">#level=&quot;domicile&quot; permet de basculer la ligne &quot;domicile équipe 1&quot;</span>
+        <span class="n">matchs</span> <span class="o">=</span> <span class="n">matchs</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;journee&quot;</span><span class="p">])</span>  <span class="c1"># enleve la diagonale vide, après le dépliage</span>
+        <span class="n">matchs</span><span class="o">=</span><span class="n">matchs</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span> <span class="c1">#après le strack, les collnes extérieur et domicile sont des étiquettes de ligne mais pas des vrais colonnes</span>
+        <span class="n">matchs</span><span class="o">=</span><span class="n">matchs</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;journee&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1">#cette ligne de code fait 2 choses en même temps, elle trie les matchs par numéro de journée, et le reset index est pour numéroter les lignes par 0, 1, 2</span>
+
+    <span class="c1"># correspondance nom - index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">grille</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="c1">#récupère la liste des noms d&#39;équipes</span>
+        <span class="n">index_equipes</span><span class="o">=</span><span class="p">{</span><span class="n">nom</span><span class="p">:</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">nom</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">)}</span> <span class="c1">#création du dictionnaire {nom: numéro}</span>
+
+        <span class="c1">#on remplace chaque nom d&#39;équipe par son numéro puis on convertit sous format numpy</span>
+        <span class="n">idx_dom</span><span class="o">=</span><span class="n">matchs</span><span class="p">[</span><span class="s2">&quot;Domicile&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">index_equipes</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">idx_ext</span> <span class="o">=</span> <span class="n">matchs</span><span class="p">[</span><span class="s2">&quot;Exterieur&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">index_equipes</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">buts_dom</span> <span class="o">=</span> <span class="n">matchs</span><span class="p">[</span><span class="s2">&quot;buts_dom&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">buts_ext</span> <span class="o">=</span> <span class="n">matchs</span><span class="p">[</span><span class="s2">&quot;buts_ext&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+<span class="c1">#mtn il faut empiler ces 4 colonnes cote à cote</span>
+<span class="c1"># Chaque ligne = [idx_dom, idx_ext, buts_dom, buts_ext]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">matchs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">idx_dom</span><span class="p">,</span> <span class="n">idx_ext</span><span class="p">,</span> <span class="n">buts_dom</span><span class="p">,</span> <span class="n">buts_ext</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">matchs</span> <span class="c1">#tableau au coeurr du problème pour entrainer le modèle</span></div>
+
+
+
+<div class="viewcode-block" id="ModelePoisson.deplier">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.deplier">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">deplier</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Découpe le vecteur de paramètres en attaques, défenses et avantages.</span>
+
+<span class="sd">        :param params: vecteur plat de longueur 3 * n_equipes.</span>
+<span class="sd">        :type params: numpy.ndarray</span>
+<span class="sd">        :return: tuple (attaques, defenses, avantage), chacun de longueur n_equipes.</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span> <span class="c1">#nombre d&#39;équipe</span>
+        <span class="n">attaques</span><span class="o">=</span><span class="n">params</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
+        <span class="n">defenses</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="n">n</span><span class="p">:</span><span class="mi">2</span><span class="o">*</span><span class="n">n</span><span class="p">]</span>
+        <span class="n">avantage</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">n</span><span class="p">:</span><span class="mi">3</span><span class="o">*</span><span class="n">n</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">attaques</span><span class="p">,</span> <span class="n">defenses</span><span class="p">,</span> <span class="n">avantage</span></div>
+
+
+    <span class="c1">#fonction qui calcule les buts attendus</span>
+
+<div class="viewcode-block" id="ModelePoisson.calculer_lambda_mu">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.calculer_lambda_mu">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculer_lambda_mu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx_dom</span><span class="p">,</span> <span class="n">idx_ext</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Renvoie le nombre de buts attendus pour les deux équipes d&#39;un match.</span>
+
+<span class="sd">        :param idx_dom: index de l&#39;équipe à domicile.</span>
+<span class="sd">        :type idx_dom: int</span>
+<span class="sd">        :param idx_ext: index de l&#39;équipe à l&#39;extérieur.</span>
+<span class="sd">        :type idx_ext: int</span>
+<span class="sd">        :return: tuple (lam, mu) des buts attendus à domicile et à l&#39;extérieur.</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># On decoupe les parametres actuels en attaques, defenses, avantage.</span>
+        <span class="n">attaques</span><span class="p">,</span> <span class="n">defenses</span><span class="p">,</span> <span class="n">avantage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deplier</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="c1"># formule du modele pour l&#39;equipe a domicile (avec le bonus d&#39;avantage en fonction de l&#39;équipe).</span>
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">attaques</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">]</span> <span class="o">-</span> <span class="n">defenses</span><span class="p">[</span><span class="n">idx_ext</span><span class="p">]</span> <span class="o">+</span> <span class="n">avantage</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">])</span>
+
+        <span class="c1"># formule pour l&#39;equipe a l&#39;exterieur (pas de bonus domicile pour elle).</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">attaques</span><span class="p">[</span><span class="n">idx_ext</span><span class="p">]</span> <span class="o">-</span> <span class="n">defenses</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">lam</span><span class="p">,</span> <span class="n">mu</span></div>
+
+
+    <span class="c1">#calculer la perte pour que le modèle s&#39;optimise</span>
+
+<div class="viewcode-block" id="ModelePoisson.perte">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.perte">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">perte</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">matchs</span><span class="p">,</span> <span class="n">poids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calcule la perte de Poisson (avec régularisation) sur tous les matchs.</span>
+
+<span class="sd">        :param params: vecteur de paramètres à évaluer.</span>
+<span class="sd">        :type params: numpy.ndarray</span>
+<span class="sd">        :param matchs: tableau des matchs [idx_dom, idx_ext, buts_dom, buts_ext].</span>
+<span class="sd">        :type matchs: numpy.ndarray</span>
+<span class="sd">        :param poids: poids par match (même longueur que matchs). Si None, poids égaux.</span>
+<span class="sd">        :type poids: numpy.ndarray | None</span>
+<span class="sd">        :return: valeur de la perte totale à minimiser.</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attaques</span><span class="p">,</span> <span class="n">defenses</span><span class="p">,</span> <span class="n">avantage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deplier</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="n">idx_dom</span> <span class="o">=</span> <span class="n">matchs</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">idx_ext</span> <span class="o">=</span> <span class="n">matchs</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">buts_dom</span> <span class="o">=</span> <span class="n">matchs</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">buts_ext</span> <span class="o">=</span> <span class="n">matchs</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>
+
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">attaques</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">]</span> <span class="o">-</span> <span class="n">defenses</span><span class="p">[</span><span class="n">idx_ext</span><span class="p">]</span> <span class="o">+</span> <span class="n">avantage</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">])</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">attaques</span><span class="p">[</span><span class="n">idx_ext</span><span class="p">]</span> <span class="o">-</span> <span class="n">defenses</span><span class="p">[</span><span class="n">idx_dom</span><span class="p">])</span>
+
+        <span class="n">erreur_dom</span> <span class="o">=</span> <span class="n">lam</span> <span class="o">-</span> <span class="n">buts_dom</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lam</span><span class="p">)</span>
+        <span class="n">erreur_ext</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">-</span> <span class="n">buts_ext</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">poids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">perte_dom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">poids</span> <span class="o">*</span> <span class="n">erreur_dom</span><span class="p">)</span>
+            <span class="n">perte_ext</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">poids</span> <span class="o">*</span> <span class="n">erreur_ext</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">perte_dom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">erreur_dom</span><span class="p">)</span>
+            <span class="n">perte_ext</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">erreur_ext</span><span class="p">)</span>
+
+        <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.001</span>
+        <span class="n">regularisation</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">attaques</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">defenses</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">perte_dom</span> <span class="o">+</span> <span class="n">perte_ext</span> <span class="o">+</span> <span class="n">regularisation</span></div>
+
+
+<span class="c1">#Entrainement du modèle</span>
+<div class="viewcode-block" id="ModelePoisson.entrainer">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.entrainer">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">entrainer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matchs</span><span class="p">,</span> <span class="n">poids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apprend les paramètres en minimisant la perte pondérée.</span>
+
+<span class="sd">        :param matchs: tableau des matchs [idx_dom, idx_ext, buts_dom, buts_ext].</span>
+<span class="sd">        :type matchs: numpy.ndarray</span>
+<span class="sd">        :param poids: poids par match (même longueur que matchs). Si None, poids égaux.</span>
+<span class="sd">        :type poids: numpy.ndarray | None</span>
+<span class="sd">        :return: rien ; met à jour self.params et self.perte_finale.</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize</span>
+
+        <span class="n">depart</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)</span>
+
+        <span class="n">resultat</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">perte</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">matchs</span><span class="p">,</span> <span class="n">poids</span><span class="p">),</span>
+            <span class="n">x0</span><span class="o">=</span><span class="n">depart</span><span class="p">,</span>
+            <span class="n">method</span><span class="o">=</span><span class="s2">&quot;BFGS&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">resultat</span><span class="o">.</span><span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perte_finale</span> <span class="o">=</span> <span class="n">resultat</span><span class="o">.</span><span class="n">fun</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<span class="c1">#sorties du code pour que ça soit utilisable pour ensuite simuler</span>
+<div class="viewcode-block" id="ModelePoisson.get_forces">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.get_forces">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_forces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Renvoie les forces apprises sous forme de dictionnaire pour le simulateur.</span>
+
+<span class="sd">        :return: dictionnaire {numero_equipe: (attaque, defense)}.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attaques</span><span class="p">,</span><span class="n">defenses</span><span class="p">,</span><span class="n">_</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">deplier</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="c1">#il faut avant tout constrsuire le dictionnaire, et il faut aussi convertir les nombres Numpy en float</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">i</span><span class="p">:(</span><span class="nb">float</span><span class="p">(</span><span class="n">attaques</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span><span class="nb">float</span><span class="p">(</span><span class="n">defenses</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)}</span></div>
+
+
+<div class="viewcode-block" id="ModelePoisson.get_avantage_domicile">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.get_avantage_domicile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_avantage_domicile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Renvoie l&#39;avantage du terrain pour chaque équipe (dernier paramètre du vecteur).</span>
+
+<span class="sd">        :return: dictionnaire {numero_equipe: avantage_domicile}.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">avantage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deplier</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span> <span class="c1">#les 2 premiers termes ne nous interesent pas d&#39;où le _</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">avantage</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">)}</span></div>
+
+
+<div class="viewcode-block" id="ModelePoisson.get_index_equipes">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.get_index_equipes">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_index_equipes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Renvoie la correspondance {nom_equipe: numero} mémorisée à la lecture.</span>
+
+<span class="sd">        :return: dictionnaire {nom_equipe: numero}, ou None si non chargé.</span>
+<span class="sd">        :rtype: dict | None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_equipes</span></div>
+
+
+<div class="viewcode-block" id="ModelePoisson.sauvegarder">
+<a class="viewcode-back" href="../../simulation.modele.html#simulation.modele.ModelePoisson.sauvegarder">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sauvegarder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chemin_pickle</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sauvegarde les forces apprises au format pickle.</span>
+
+<span class="sd">        :param chemin_pickle: chemin du fichier .pkl de sortie.</span>
+<span class="sd">        :type chemin_pickle: str</span>
+<span class="sd">        :return: rien ; écrit un fichier sur disque.</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">donnees</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="s2">&quot;n_equipes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_equipes</span><span class="p">,</span>
+                   <span class="s2">&quot;noms_equipes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">noms_equipes</span><span class="p">,</span> <span class="s2">&quot;index_equipes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_equipes</span><span class="p">}</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">to_pickle</span><span class="p">(</span><span class="n">donnees</span><span class="p">,</span> <span class="n">chemin_pickle</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Modules</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

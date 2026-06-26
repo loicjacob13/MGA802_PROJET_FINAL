@@ -9,13 +9,14 @@ def chrono_simulation(fonction, nom_saison, n_simulations):
     """
     Mesure le temps d'exécution d'une simulation de saison.
 
-    Args:
-        fonction: la fonction de simulation à mesurer (simuler_saison).
-        nom_saison (str): la saison à simuler (ex: "2023-2024").
-        n_simulations (int): nombre de simulations Monte-Carlo (choisi par l'user).
-
-    Returns:
-        tuple: (resultats, sim, index_saison, duree) où duree est en secondes.
+    :param fonction: la fonction de simulation à mesurer (simuler_saison).
+    :type fonction: callable
+    :param nom_saison: la saison à simuler (ex. "2023-2024").
+    :type nom_saison: str
+    :param n_simulations: nombre de simulations Monte-Carlo (choisi par l'utilisateur).
+    :type n_simulations: int
+    :return: tuple (resultats, sim, index_saison, duree) où duree est en secondes.
+    :rtype: tuple
     """
     tic = perf_counter()                       # on démarre le chrono
     resultats, sim, index_saison = fonction(nom_saison, n_simulations)
