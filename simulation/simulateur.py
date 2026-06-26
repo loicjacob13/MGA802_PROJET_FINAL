@@ -7,7 +7,18 @@ import pandas as pd
 
 class Simulateur:
     """Simule des saisons de Premier League par tirage aléatoire (loi de Poisson)."""
+
     def __init__(self, forces: dict, avantage_domicile: float, index_equipes: dict):
+        """
+        Initialise le simulateur à partir des forces apprises par le modèle.
+
+        :param forces: forces des équipes au format {index: (attaque, defense)}.
+        :type forces: dict
+        :param avantage_domicile: avantage à domicile par équipe {index: valeur}.
+        :type avantage_domicile: dict
+        :param index_equipes: correspondance {nom: index}.
+        :type index_equipes: dict
+        """
         self.forces = forces                        # {index: (attaque, defense)}
         self.avantage_domicile = avantage_domicile  # float
         self.index_equipes = index_equipes          # {nom: index}
@@ -30,13 +41,22 @@ class Simulateur:
     # ------------------------------------------------------------------
 
     def simuler_match(self, index_dom: int, index_ext: int) -> tuple:
-        """Tire un score aléatoire pour un match entre deux équipes."""
+        """
+        Tire un score aléatoire pour un match entre deux équipes.
+
+        :param index_dom: index de l'équipe à domicile.
+        :type index_dom: int
+        :param index_ext: index de l'équipe à l'extérieur.
+        :type index_ext: int
+        :return: tuple (buts_dom, buts_ext) tiré selon la loi de Poisson.
+        :rtype: tuple
+        """
         attaque_dom = self.attaques[index_dom]
         defense_dom = self.defenses[index_dom]
         attaque_ext = self.attaques[index_ext]
         defense_ext = self.defenses[index_ext]
 
-        # Formule du modèle de Poisson (voir brief_guillaume.md §2)
+        # Formule du modèle de Poisson
         lam = np.exp(attaque_dom - defense_ext + self.avantages[index_dom])  # buts attendus dom.
         mu  = np.exp(attaque_ext - defense_dom)                           # buts attendus ext.
 
@@ -51,7 +71,12 @@ class Simulateur:
     # ------------------------------------------------------------------
 
     def simuler_saison(self) -> pd.DataFrame:
-        """Joue les 380 matchs d'une saison et retourne le classement final."""
+        """
+        Joue les 380 matchs d'une saison et retourne le classement final.
+
+        :return: classement final trié, colonnes equipe / points / diff_buts / position.
+        :rtype: pandas.DataFrame
+        """
         points = np.zeros(self.n_equipes, dtype=int)
         diff_buts = np.zeros(self.n_equipes, dtype=int)
 
@@ -139,6 +164,16 @@ class Simulateur:
     # ÉTAPE 3 — Simulation Monte-Carlo (N saisons → probabilités)
     # ------------------------------------------------------------------
     def simuler_monte_carlo(self, n_simulations: int) -> pd.DataFrame:
+        """
+        Répète la simulation de saison N fois et calcule les probabilités de classement.
+
+        :param n_simulations: nombre de saisons à simuler.
+        :type n_simulations: int
+        :return: DataFrame indexé par équipe, avec proba_titre, proba_top4,
+            proba_relegation, position_moyenne et points_moyens, trié par
+            position moyenne croissante.
+        :rtype: pandas.DataFrame
+        """
         positions_acc = np.zeros((self.n_equipes, n_simulations), dtype=int)
         points_acc = np.zeros((self.n_equipes, n_simulations), dtype=int)
 
@@ -173,60 +208,29 @@ class Simulateur:
 
         return resultats
 
-    '''def simuler_monte_carlo(self, n_simulations: int) -> pd.DataFrame:
-        """Répète la simulation de saison N fois et calcule les probabilités de classement."""
-        # Tableaux NumPy pour accumuler les résultats — évite les listes Python lentes
-        # positions_acc[i, sim] = position finale de l'équipe i à la simulation sim
-        positions_acc = np.zeros((self.n_equipes, n_simulations), dtype=int)
-        points_acc    = np.zeros((self.n_equipes, n_simulations), dtype=int)
-
-        # Dictionnaire nom → index pour retrouver la ligne dans les tableaux
-        nom_vers_index = self.index_equipes   # {nom: index}
-
-        for sim in range(n_simulations):
-            classement = self.simuler_saison()  # DataFrame trié par points décroissants
-
-            # On enregistre la position et les points de chaque équipe
-            for _, ligne in classement.iterrows():
-                idx = nom_vers_index[ligne['equipe']]
-                positions_acc[idx, sim] = ligne['position']
-                points_acc[idx, sim]    = ligne['points']
-
-        # --- Calcul vectorisé des probabilités avec NumPy ---
-        # proba_titre : proportion de simulations où l'équipe finit 1ère
-        proba_titre      = (positions_acc == 1).mean(axis=1)
-        # proba_top4 : proportion de simulations où l'équipe finit dans les 4 premières
-        proba_top4       = (positions_acc <= 4).mean(axis=1)
-        # proba_relegation : proportion de simulations où l'équipe finit 18e, 19e ou 20e
-        proba_relegation = (positions_acc >= 18).mean(axis=1)
-        # position_moyenne : moyenne des positions finales
-        position_moyenne = positions_acc.mean(axis=1)
-        # points_moyens : moyenne des points finaux
-        points_moyens    = points_acc.mean(axis=1)
-
-        # --- Construction du DataFrame résultat ---
-        resultats = pd.DataFrame({
-            'proba_titre'     : proba_titre,
-            'proba_top4'      : proba_top4,
-            'proba_relegation': proba_relegation,
-            'position_moyenne': position_moyenne,
-            'points_moyens'   : points_moyens,
-        }, index=[self.noms_equipes[i] for i in range(self.n_equipes)])
-
-        resultats.index.name = 'equipe'
-
-        # Tri par position moyenne croissante pour faciliter la lecture
-        resultats = resultats.sort_values('position_moyenne')
-
-        return resultats'''
-
     # ------------------------------------------------------------------
     # ÉTAPE 4 — Facteur de moral
     # ------------------------------------------------------------------
 
     def appliquer_moral(self, lambda_base: float, index_equipe: int,
                         journee: int, classement_actuel: pd.DataFrame) -> float:
-        """Ajuste le lambda d'une équipe en fin de saison selon son enjeu."""
+        """
+        Ajuste le lambda d'une équipe en fin de saison selon son enjeu.
+
+        Aucun ajustement avant la journée 35. Ensuite, bonus de motivation pour les
+        équipes menacées de relégation (+10%) ou en course pour le haut de tableau (+5%).
+
+        :param lambda_base: buts attendus avant ajustement.
+        :type lambda_base: float
+        :param index_equipe: index de l'équipe concernée.
+        :type index_equipe: int
+        :param journee: numéro de la journée en cours.
+        :type journee: int
+        :param classement_actuel: classement courant avec colonnes equipe / position.
+        :type classement_actuel: pandas.DataFrame
+        :return: lambda ajusté par le multiplicateur de moral.
+        :rtype: float
+        """
         # Avant la journée 35, aucun ajustement
         if journee < 35:
             return lambda_base

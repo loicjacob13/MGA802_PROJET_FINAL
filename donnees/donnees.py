@@ -1,4 +1,4 @@
-"""donnees.py — Ce fichier permet de charger et nettoyage des données de Premier League
+"""donnees.py — Ce fichier permet de charger et nettoyer les données de Premier League.
 Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
 """
 
@@ -7,17 +7,20 @@ import numpy as np
 
 class ChargeurDonnees:   #création de la classe
     """
-    Charge, nettoie et permet de donner les données de matchs de
-    Premier League qui viennent ici de nos 3 CSV
+    Charge, nettoie et donne accès aux données de matchs de Premier League (3 CSV).
 
-    Accepte un seul chemin csv (en str) ou une liste de chemins (list)
-    si on veut fusionner plusieurs saisons (on en a que 3 ici)
+    Accepte un seul chemin CSV (str) ou une liste de chemins (list) si on veut
+    fusionner plusieurs saisons.
     """
 
     def __init__(self, chemin_csv):
         """
         Charge le ou les CSV et stocke le résultat dans self.donnees.
-        Les paramètres sont un chemin, ou une liste de chemins vers des csv (3 ici, mais on peut en ajouter)
+
+        :param chemin_csv: chemin d'un CSV, ou liste de chemins de CSV à fusionner.
+        :type chemin_csv: str | list
+        :raises FileNotFoundError: si un fichier CSV est introuvable.
+        :raises TypeError: si chemin_csv n'est ni une str ni une list.
         """
         ENCODAGE = 'utf-8-sig'  #encoding utf8 gère le BOM (caractère parasite présent dans certains CSV) — si aucuns parasites, il ne fait rien
 
@@ -57,8 +60,11 @@ class ChargeurDonnees:   #création de la classe
 
     def nettoyer(self):
         """
-        Prépare les données brutes pour le modèle
-        en filtrant et enlevant ce qui n'est pas utile
+        Prépare les données brutes pour le modèle en filtrant les colonnes
+        utiles, en convertissant les dates et en supprimant les lignes vides.
+
+        :return: rien ; modifie self.donnees en place.
+        :rtype: None
         """
         colonnes_utiles = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']  #on  enlève les colonnes inutiles
         self.donnees = self.donnees[colonnes_utiles]
@@ -78,7 +84,10 @@ class ChargeurDonnees:   #création de la classe
 
     def get_equipes(self):
         """
-        Retourne la liste triée alphabétiquement de toutes les équipes uniques
+        Retourne la liste triée alphabétiquement de toutes les équipes uniques.
+
+        :return: liste des noms d'équipes, triée alphabétiquement.
+        :rtype: list
         """
         equipes_dom = self.donnees['HomeTeam'].unique()   #équipes qui ont joué à domicile
         equipes_ext = self.donnees['AwayTeam'].unique()    #équipes qui ont joué à l'extérieur
@@ -88,8 +97,10 @@ class ChargeurDonnees:   #création de la classe
 
     def get_index_equipes(self):
         """
-        Retourne un dictionnaire {nom_equipe: numero_entier}.
-        le numéro correspond à la position dans la liste triée de get_equipes()
+        Associe à chaque équipe un numéro entier selon sa position dans la liste triée.
+
+        :return: dictionnaire {nom_equipe: numero_entier}.
+        :rtype: dict
         """
         equipes = self.get_equipes()    #liste triée des équipes
         index_equipes = {nom: numero for numero, nom in enumerate(equipes)}     #dict comprehension avec enumerate()
@@ -97,7 +108,12 @@ class ChargeurDonnees:   #création de la classe
 
     def get_matchs(self):
         """
-        Retourne tous les matchs sous forme de tableau
+        Retourne tous les matchs sous forme de tableau d'entiers.
+
+        Chaque ligne suit le format [index_dom, index_ext, buts_dom, buts_ext].
+
+        :return: tableau NumPy de forme (n_matchs, 4) au format entier.
+        :rtype: numpy.ndarray
         """
         index_equipes = self.get_index_equipes()  #dictionnaire {nom: numéro}
         donnees_brutes = self.donnees[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']].to_numpy() #on extrait les 4 colonnes utiles et on convertit en tableau NumPy
@@ -115,8 +131,11 @@ class ChargeurDonnees:   #création de la classe
 
     def statistiques_equipes(self):
         """
-        Calcule les buts moyens marqués et encaissés pour cahque équipe
-        La fonction retourne un pandas.DataFrame indexé par nom d'équipe
+        Calcule les buts moyens marqués et encaissés pour chaque équipe.
+
+        :return: DataFrame indexé par nom d'équipe, colonnes buts_marques_moy
+            et buts_encaisses_moy.
+        :rtype: pandas.DataFrame
         """
 
         stats_dom = self.donnees.groupby('HomeTeam').agg(  #.groupby() regroupe les matchs par équipe, .mean() calcule la moyenne
@@ -138,10 +157,13 @@ class ChargeurDonnees:   #création de la classe
 
     def sauvegarder(self, chemin_pickle):
         """
-        Sauvegarde les données nettoyées au format pickle.
-        Le format est beaucoup plus rapide à relire qu'un CSV.
-        Par ailleurs, il conserve les types de connées du csv
-        Ses paramètres sont chemin_pickle (str)
+        Sauvegarde les données nettoyées au format pickle (relecture rapide,
+        conservation des types).
+
+        :param chemin_pickle: chemin du fichier .pkl de sortie.
+        :type chemin_pickle: str
+        :return: rien ; écrit un fichier sur disque.
+        :rtype: None
         """
         self.donnees.to_pickle(chemin_pickle)     #sauvegarde binaire Pandas
         print(f"Données sauvegardées dans : {chemin_pickle}")

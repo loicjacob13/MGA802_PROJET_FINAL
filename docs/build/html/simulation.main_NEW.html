@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>simulation.main_NEW module &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="simulation.modele module" href="simulation.modele.html" />
+    <link rel="prev" title="simulation.forces_promus module" href="simulation.forces_promus.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-simulation.main_NEW">
+<span id="simulation-main-new-module"></span><h1>simulation.main_NEW module<a class="headerlink" href="#module-simulation.main_NEW" title="Lien vers cette rubrique">¶</a></h1>
+<p>main_NEW.py — Choisir une saison et la simuler automatiquement.
+Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</p>
+<p>PRINCIPE :
+L’utilisateur choisit une saison. On cherche d’abord le meilleur trio de pondération
+(validé sur la saison juste avant celle choisie), puis le modèle s’entraîne sur les
+3 saisons précédentes avec ces poids, approxime les forces des équipes promues, et
+simule. Si la saison a déjà été jouée, on compare au classement réel.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="simulation.main_NEW.classement_reel">
+<span class="sig-prename descclassname"><span class="pre">simulation.main_NEW.</span></span><span class="sig-name descname"><span class="pre">classement_reel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chargeur</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/main_NEW.html#classement_reel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.main_NEW.classement_reel" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Calcule le vrai classement final (3 points victoire / 1 nul / 0 défaite).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chargeur</strong> (<a class="reference internal" href="donnees.donnees.html#donnees.donnees.ChargeurDonnees" title="donnees.donnees.ChargeurDonnees"><em>ChargeurDonnees</em></a>) – instance ChargeurDonnees déjà chargée.</p></li>
+<li><p><strong>index</strong> (<em>dict</em>) – correspondance {nom_equipe: numero}.</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – nombre d’équipes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>tableau où positions[numero_equipe] donne la position finale (1 = premier).</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simulation.main_NEW.construire_index">
+<span class="sig-prename descclassname"><span class="pre">simulation.main_NEW.</span></span><span class="sig-name descname"><span class="pre">construire_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">liste_chargeurs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/main_NEW.html#construire_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.main_NEW.construire_index" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Construit un dictionnaire {nom: numéro} commun à plusieurs saisons.</p>
+<p>Les équipes sont numérotées par ordre alphabétique (reproductible).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>liste_chargeurs</strong> (<em>list</em>) – liste d’instances ChargeurDonnees déjà nettoyées.</p>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionnaire {nom_equipe: numero}.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simulation.main_NEW.matchs_avec_index">
+<span class="sig-prename descclassname"><span class="pre">simulation.main_NEW.</span></span><span class="sig-name descname"><span class="pre">matchs_avec_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chargeur</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/main_NEW.html#matchs_avec_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.main_NEW.matchs_avec_index" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Reconstruit la liste des matchs en remplaçant les noms d’équipes par leur numéro.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chargeur</strong> (<a class="reference internal" href="donnees.donnees.html#donnees.donnees.ChargeurDonnees" title="donnees.donnees.ChargeurDonnees"><em>ChargeurDonnees</em></a>) – instance ChargeurDonnees déjà chargée.</p></li>
+<li><p><strong>index</strong> (<em>dict</em>) – correspondance {nom_equipe: numero}.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>tableau des matchs au format [idx_dom, idx_ext, buts_dom, buts_ext].</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simulation.main_NEW.simuler_saison">
+<span class="sig-prename descclassname"><span class="pre">simulation.main_NEW.</span></span><span class="sig-name descname"><span class="pre">simuler_saison</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nom_saison</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_simulations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/main_NEW.html#simuler_saison"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.main_NEW.simuler_saison" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Calibre les poids, entraîne, approxime les promus, simule et compare au réel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nom_saison</strong> (<em>str</em>) – saison à simuler (clé de SAISONS, ex. « 2023-2024 »).</p></li>
+<li><p><strong>n_simulations</strong> (<em>int</em>) – nombre de simulations Monte-Carlo.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple (resultats, sim, index_saison) où resultats est le classement
+simulé (DataFrame), sim le Simulateur utilisé et index_saison le dict {nom: index}.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Modules</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="donnees.html">donnees package</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="simulation.html">simulation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualisation.html">visualisation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="controle_input.html">controle_input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesure_temps.html">mesure_temps module</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">Modules</a><ul>
+  <li><a href="simulation.html">simulation package</a><ul>
+      <li>Previous: <a href="simulation.forces_promus.html" title="Chapitre précédent">simulation.forces_promus module</a></li>
+      <li>Next: <a href="simulation.modele.html" title="Chapitre suivant">simulation.modele module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/simulation.main_NEW.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

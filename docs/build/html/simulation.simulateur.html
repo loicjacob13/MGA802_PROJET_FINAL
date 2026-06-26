@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>simulation.simulateur module &#8212; Documentation Simulation Premier League </title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=d1a510d7"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="visualisation package" href="visualisation.html" />
+    <link rel="prev" title="simulation.recherche_ponderation module" href="simulation.recherche_ponderation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-simulation.simulateur">
+<span id="simulation-simulateur-module"></span><h1>simulation.simulateur module<a class="headerlink" href="#module-simulation.simulateur" title="Lien vers cette rubrique">¶</a></h1>
+<p>simulateur.py — Simulation Monte-Carlo de la Premier League par loi de Poisson.
+Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="simulation.simulateur.Simulateur">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">simulation.simulateur.</span></span><span class="sig-name descname"><span class="pre">Simulateur</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">avantage_domicile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_equipes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simulation/simulateur.html#Simulateur"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.simulateur.Simulateur" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Simule des saisons de Premier League par tirage aléatoire (loi de Poisson).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.simulateur.Simulateur.appliquer_moral">
+<span class="sig-name descname"><span class="pre">appliquer_moral</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lambda_base</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_equipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">journee</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">classement_actuel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/simulation/simulateur.html#Simulateur.appliquer_moral"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.simulateur.Simulateur.appliquer_moral" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Ajuste le lambda d’une équipe en fin de saison selon son enjeu.</p>
+<p>Aucun ajustement avant la journée 35. Ensuite, bonus de motivation pour les
+équipes menacées de relégation (+10%) ou en course pour le haut de tableau (+5%).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lambda_base</strong> (<em>float</em>) – buts attendus avant ajustement.</p></li>
+<li><p><strong>index_equipe</strong> (<em>int</em>) – index de l’équipe concernée.</p></li>
+<li><p><strong>journee</strong> (<em>int</em>) – numéro de la journée en cours.</p></li>
+<li><p><strong>classement_actuel</strong> (<em>pandas.DataFrame</em>) – classement courant avec colonnes equipe / position.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>lambda ajusté par le multiplicateur de moral.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.simulateur.Simulateur.simuler_match">
+<span class="sig-name descname"><span class="pre">simuler_match</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index_dom</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_ext</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="reference internal" href="_modules/simulation/simulateur.html#Simulateur.simuler_match"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.simulateur.Simulateur.simuler_match" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Tire un score aléatoire pour un match entre deux équipes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index_dom</strong> (<em>int</em>) – index de l’équipe à domicile.</p></li>
+<li><p><strong>index_ext</strong> (<em>int</em>) – index de l’équipe à l’extérieur.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple (buts_dom, buts_ext) tiré selon la loi de Poisson.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.simulateur.Simulateur.simuler_monte_carlo">
+<span class="sig-name descname"><span class="pre">simuler_monte_carlo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_simulations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/simulation/simulateur.html#Simulateur.simuler_monte_carlo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.simulateur.Simulateur.simuler_monte_carlo" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Répète la simulation de saison N fois et calcule les probabilités de classement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>n_simulations</strong> (<em>int</em>) – nombre de saisons à simuler.</p>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame indexé par équipe, avec proba_titre, proba_top4,
+proba_relegation, position_moyenne et points_moyens, trié par
+position moyenne croissante.</p>
+</dd>
+<dt class="field-odd">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="simulation.simulateur.Simulateur.simuler_saison">
+<span class="sig-name descname"><span class="pre">simuler_saison</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/simulation/simulateur.html#Simulateur.simuler_saison"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simulation.simulateur.Simulateur.simuler_saison" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Joue les 380 matchs d’une saison et retourne le classement final.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Renvoie<span class="colon">:</span></dt>
+<dd class="field-odd"><p>classement final trié, colonnes equipe / points / diff_buts / position.</p>
+</dd>
+<dt class="field-even">Type renvoyé<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Simulation Premier League</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Modules</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="donnees.html">donnees package</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="simulation.html">simulation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualisation.html">visualisation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="controle_input.html">controle_input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mesure_temps.html">mesure_temps module</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">Modules</a><ul>
+  <li><a href="simulation.html">simulation package</a><ul>
+      <li>Previous: <a href="simulation.recherche_ponderation.html" title="Chapitre précédent">simulation.recherche_ponderation module</a></li>
+      <li>Next: <a href="visualisation.html" title="Chapitre suivant">visualisation package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Fabien Koch, Guillaume Pissang, Loïc Jacob.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/simulation.simulateur.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

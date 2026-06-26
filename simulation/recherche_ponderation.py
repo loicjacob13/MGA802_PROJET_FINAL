@@ -16,7 +16,14 @@ from simulation.simulateur import Simulateur
 
 
 def construire_index(liste_chargeurs):
-    """Construit un dictionnaire {nom: numéro} commun à plusieurs saisons."""
+    """
+    Construit un dictionnaire {nom: numéro} commun à plusieurs saisons.
+
+    :param liste_chargeurs: liste d'instances ChargeurDonnees déjà nettoyées.
+    :type liste_chargeurs: list
+    :return: dictionnaire {nom_equipe: numero}, trié alphabétiquement.
+    :rtype: dict
+    """
     noms = []
     for chargeur in liste_chargeurs:
         for nom in chargeur.get_equipes():
@@ -30,7 +37,16 @@ def construire_index(liste_chargeurs):
 
 
 def matchs_avec_index(chargeur, index):
-    """Reconstruit les matchs [idx_dom, idx_ext, buts_dom, buts_ext] avec un index donné."""
+    """
+    Reconstruit les matchs [idx_dom, idx_ext, buts_dom, buts_ext] avec un index donné.
+
+    :param chargeur: instance ChargeurDonnees déjà nettoyée.
+    :type chargeur: ChargeurDonnees
+    :param index: correspondance {nom_equipe: numero}.
+    :type index: dict
+    :return: tableau des matchs au format entier.
+    :rtype: numpy.ndarray
+    """
     brutes = chargeur.donnees[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']].to_numpy()
     lignes = []
     for ligne in brutes:
@@ -42,9 +58,16 @@ def trouver_meilleur_trio(fichiers_train, fichier_validation, n_simulations=300,
     """
     Cherche le meilleur trio de poids (p1, p2, p3) pour pondérer 3 saisons.
 
-    - fichiers_train     : liste des 3 CSV d'entraînement [ancien, ..., récent]
-    - fichier_validation : le CSV de la saison déjà jouée servant à valider
-    Renvoie le trio (p1, p2, p3) qui minimise l'erreur de classement.
+    :param fichiers_train: liste des 3 CSV d'entraînement [ancien, ..., récent].
+    :type fichiers_train: list
+    :param fichier_validation: CSV de la saison déjà jouée servant à valider.
+    :type fichier_validation: str
+    :param n_simulations: nombre de simulations Monte-Carlo par trio.
+    :type n_simulations: int
+    :param pas: pas de balayage des poids entre 0 et 1.
+    :type pas: float
+    :return: trio (p1, p2, p3) qui minimise l'erreur de classement.
+    :rtype: tuple
     """
     # --- Chargement des 3 saisons d'entraînement + la saison de validation ---
     c1 = ChargeurDonnees(fichiers_train[0]); c1.nettoyer()
@@ -89,6 +112,18 @@ def trouver_meilleur_trio(fichiers_train, fichier_validation, n_simulations=300,
 
     # --- Évalue un trio : entraîne, simule, renvoie l'erreur ---
     def evaluer_trio(p1, p2, p3):
+        """
+        Entraîne le modèle avec un trio de poids, simule, et renvoie l'erreur.
+
+        :param p1: poids de la saison la plus ancienne.
+        :type p1: float
+        :param p2: poids de la saison intermédiaire.
+        :type p2: float
+        :param p3: poids de la saison la plus récente.
+        :type p3: float
+        :return: somme des écarts de position entre classement prédit et réel.
+        :rtype: int
+        """
         matchs_tous = np.vstack([matchs_1, matchs_2, matchs_3])
         poids_1 = np.ones(len(matchs_1)) * p1
         poids_2 = np.ones(len(matchs_2)) * p2

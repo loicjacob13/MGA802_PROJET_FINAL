@@ -1,5 +1,5 @@
 """
-validation_saisie.py — Fonctions de saisie contrôlée pour l'utilisateur.
+controle_input.py — Fonctions de saisie contrôlée pour l'utilisateur.
 
 PRINCIPE :
 On regroupe ici les fonctions qui demandent une saisie à l'utilisateur et qui
@@ -11,11 +11,16 @@ vérifient qu'elle est valide. Tant que la saisie est incorrecte, on redemande
 def demander_saison(message, saisons_valides):
     """
     Demande une saison à l'utilisateur et renvoie son nom.
-    Tant que la saisie ne correspond pas à une saison valide, on redemande.
-    Gère les espaces en trop et les fautes de frappe (ex: "2103-2023").
 
-    - message         : le texte affiché à l'utilisateur
-    - saisons_valides : le dictionnaire (ou la liste) des saisons autorisées
+    Tant que la saisie ne correspond pas à une saison valide, on redemande.
+    Gère les espaces en trop.
+
+    :param message: texte affiché à l'utilisateur.
+    :type message: str
+    :param saisons_valides: dictionnaire (ou liste) des saisons autorisées.
+    :type saisons_valides: dict | list
+    :return: nom de la saison valide saisie.
+    :rtype: str
     """
     while True:
         saisie = input(message).strip()        # .strip() enlève les espaces avant/après
@@ -26,8 +31,14 @@ def demander_saison(message, saisons_valides):
 
 def demander_entier_positif(message):
     """
-    Demande un nombre entier strictement positif (ex : nombre de simulations).
+    Demande un nombre entier strictement positif (ex. nombre de simulations).
+
     Tant que la saisie n'est pas un entier positif, on redemande.
+
+    :param message: texte affiché à l'utilisateur.
+    :type message: str
+    :return: entier strictement positif saisi.
+    :rtype: int
     """
     while True:
         try:
@@ -43,12 +54,17 @@ def demander_entier_positif(message):
 
 def demander_sigle(message, sigle_vers_nom):
     """
-    Demande un sigle officiel et renvoie le NOM complet de l'équipe.
-    Tant que le sigle n'existe pas dans la saison, on redemande.
-    Gère les espaces, la casse (ars/ARS) et les sigles faux (ARSS, AR, "").
+    Demande un sigle officiel et renvoie le nom complet de l'équipe.
 
-    - message        : le texte affiché à l'utilisateur
-    - sigle_vers_nom : dictionnaire {sigle: nom} des équipes de la saison
+    Tant que le sigle n'existe pas dans la saison, on redemande. Gère les espaces
+    et la casse (ars/ARS).
+
+    :param message: texte affiché à l'utilisateur.
+    :type message: str
+    :param sigle_vers_nom: dictionnaire {sigle: nom} des équipes de la saison.
+    :type sigle_vers_nom: dict
+    :return: nom complet de l'équipe correspondant au sigle.
+    :rtype: str
     """
     while True:
         saisie = input(message).strip().upper()    # .strip() enlève les espaces, .upper() met en majuscules
