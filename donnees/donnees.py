@@ -24,7 +24,7 @@ class ChargeurDonnees:   #création de la classe
         if isinstance(chemin_csv, str):            #on vérifie si l'argument reçu est une simple chaîne de caractères (un seul fichier)
 
             try:
-                self.donnees = pd.read_csv(chemin_csv, encoding=ENCODAGE)  #lecture du csv dans un DataFrame
+                self.donnees = pd.read_csv('../donnees/' + chemin_csv, encoding=ENCODAGE) #lecture du csv dans un DataFrame
                 print(f"Fichier chargé : {chemin_csv} ({len(self.donnees)} matchs)")
             except FileNotFoundError:
                 raise FileNotFoundError(                #on lève une erreur si le fichier n'existe pas

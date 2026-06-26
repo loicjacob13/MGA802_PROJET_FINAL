@@ -1,10 +1,10 @@
 import numpy as np
 from donnees import ChargeurDonnees
-from modele import ModelePoisson
-from simulateur import Simulateur
+from simulation.modele import ModelePoisson
+from simulation.simulateur import Simulateur
 from visualisation import Visualiseur
 import matplotlib.pyplot as plt
-from forces_promus import forces_pour_position_cible
+from simulation.forces_promus import forces_pour_position_cible
 
 
 
@@ -145,7 +145,7 @@ print(f"\nNombre d'équipes pour la nouvelle saison : {len(index_saison)}")  # d
 # ----------------------------------------------------------------------
 # 4. SIMULATION DE LA NOUVELLE SAISON AVEC LES 20 ÉQUIPES
 # ----------------------------------------------------------------------
-from simulateur import Simulateur
+from simulation.simulateur import Simulateur
 
 # On passe maintenant avantage_saison (bons numéros) au lieu de avantage
 sim_nouvelle = Simulateur(forces_saison, avantage_saison, index_saison)   # <-- CORRIGÉ

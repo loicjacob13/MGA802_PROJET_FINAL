@@ -34,7 +34,7 @@ class Visualiseur:
         ax.set_xlabel("Équipe")
         ax.tick_params(axis='x', rotation=45)
         plt.tight_layout()
-        plt.savefig("graphique_probabilites_titre.png", dpi=150)
+        #plt.savefig("../graphique_probabilites_titre.png", dpi=150)
         plt.draw()
 
     '''def graphique_probabilites_titre(self) -> None:
@@ -95,7 +95,7 @@ class Visualiseur:
         ax.set_ylabel("Nombre de simulations")
         ax.legend()
         plt.tight_layout()
-        plt.savefig(f"graphique_distribution_{nom_equipe.replace(' ', '_')}.png", dpi=150)
+        #plt.savefig(f"graphique_distribution_{nom_equipe.replace(' ', '_')}.png", dpi=150)
         plt.draw()
 
     '''def graphique_distribution_points(self, nom_equipe: str) -> None:
@@ -140,7 +140,7 @@ class Visualiseur:
         ax.legend(fontsize=10)
         plt.tight_layout()
         nom_fichier = f"graphique_distribution_{nom_equipe.replace(' ', '_')}.png"
-        plt.savefig(nom_fichier, dpi=150)
+        #plt.savefig(nom_fichier, dpi=150)
         plt.show()'''
 
     # ------------------------------------------------------------------
@@ -180,7 +180,7 @@ class Visualiseur:
         ax.set_xlim(0, 21)
         ax.legend(fontsize=9)
         plt.tight_layout()
-        plt.savefig("graphique_classement_moyen.png", dpi=150)
+        #plt.savefig("../graphique_classement_moyen.png", dpi=150)
         plt.draw()
 
     '''def graphique_classement_moyen(self) -> None:
