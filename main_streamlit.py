@@ -4,12 +4,11 @@ Entraînement sur l'historique complet (8 saisons), intégration des promus/rel�
 """
 import streamlit as st
 import numpy as np
-import pandas as pd
 from donnees import ChargeurDonnees
-from modele import ModelePoisson
-from simulateur import Simulateur
+from simulation.modele import ModelePoisson
+from simulation.simulateur import Simulateur
 from visualisation_streamlit import Visualiseur
-from forces_promus import forces_pour_position_cible
+from simulation.forces_promus import forces_pour_position_cible
 
 st.set_page_config(page_title="Simulateur Premier League", layout="wide", initial_sidebar_state="collapsed")
 

@@ -8,7 +8,7 @@ on va aussi afficher les donnes en print pour visuellement voir nous même s'il 
 
 import pandas as pd
 import numpy as np
-from donnees import ChargeurDonnees #on importe la classe qu'on a codée qui est dans le même dossier
+from .donnees import ChargeurDonnees #on importe la classe qu'on a codée qui est dans le même dossier
 
 SOUS_COLONNES = ["journee", "buts_dom", "buts_ext", "resultat",     #sous-colonnes affichées dans chaque case de la grille
                  "pts_dom", "pts_ext", "diff_buts", "total_buts"]
@@ -34,7 +34,7 @@ def get_toutes_les_equipes(fichiers):
     toutes_les_equipes = set()      #ensemble vide pour stocker toutes les équipes uniques
 
     for fichier in fichiers.values():  #on parcourt chaque fichier CSV
-        df_temp = pd.read_csv(fichier, encoding='utf-8-sig')
+        df_temp = pd.read_csv('../donnees/' + fichier, encoding='utf-8-sig')
         equipes = set(df_temp['HomeTeam'].unique()) | set(df_temp['AwayTeam'].unique())    #union domicile + extérieur
         toutes_les_equipes.update(equipes)     #on ajoute l'ensemble de cette saison à l'ensemble global (Union)
 

@@ -11,8 +11,8 @@ classement prédit ressemble le plus au vrai classement.
 import numpy as np
 import pandas as pd
 from donnees import ChargeurDonnees
-from modele import ModelePoisson
-from simulateur import Simulateur
+from simulation.modele import ModelePoisson
+from simulation.simulateur import Simulateur
 
 
 def construire_index(liste_chargeurs):

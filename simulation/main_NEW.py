@@ -1,5 +1,5 @@
 """
-simuler_saison_choisie.py — Choisir une saison et la simuler automatiquement.
+main_NEW.py — Choisir une saison et la simuler automatiquement.
 Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
 
 PRINCIPE :
@@ -12,11 +12,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from donnees import ChargeurDonnees
-from modele import ModelePoisson
-from simulateur import Simulateur
+from simulation.modele import ModelePoisson
+from simulation.simulateur import Simulateur
 from visualisation import Visualiseur
-from forces_promus import forces_pour_position_cible
-from recherche_ponderation import trouver_meilleur_trio
+from simulation.forces_promus import forces_pour_position_cible
+from simulation.recherche_ponderation import trouver_meilleur_trio
 from controle_input import demander_saison, demander_entier_positif, demander_sigle
 
 
@@ -338,3 +338,4 @@ if __name__ == "__main__":
     visu.graphique_classement_moyen()
     visu.graphique_distribution_points(equipe, simulateur=sim)
     plt.show()
+

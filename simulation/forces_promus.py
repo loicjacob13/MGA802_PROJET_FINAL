@@ -18,8 +18,8 @@ fiable, sans être faussée par les équipes cumulées de plusieurs saisons.
 """
 import numpy as np
 from donnees import ChargeurDonnees
-from modele import ModelePoisson
-from simulateur import Simulateur
+from simulation.modele import ModelePoisson
+from simulation.simulateur import Simulateur
 
 
 def equipe_la_plus_proche(resultats, position_cible):
