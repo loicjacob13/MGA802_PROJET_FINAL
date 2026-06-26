@@ -40,6 +40,7 @@ def creer_chargeur():
 # Tests vérifiant le chargement des fichiers :
 
 def test_chargement_fichier_existant():
+    """Vérifie qu'un fichier CSV existant est chargé sans erreur."""
     chemin = creer_csv_temporaire()
     c = ChargeurDonnees(chemin)
     assert isinstance(c.donnees, pd.DataFrame)  #self.donnees doit être un DataFrame
@@ -48,22 +49,26 @@ def test_chargement_fichier_existant():
 
 
 def test_chargement_fichier_inexistant():
+    """Vérifie qu'un FileNotFoundError est levé si le fichier est absent."""
     with pytest.raises(FileNotFoundError):  #on s'attend à une erreur claire
         ChargeurDonnees("ce_fichier_nexiste_pas.csv")
 
 def test_chargement_liste_de_fichiers():
+    """Vérifie que plusieurs CSV sont fusionnés correctement."""
     chemin = creer_csv_temporaire()
     c = ChargeurDonnees([chemin, chemin])  #même fichier deux fois
     assert len(c.donnees) == 12  #6 matchs × 2 = 12 lignes attendues
     os.unlink(chemin)
 
 def test_type_invalide():
+    """Vérifie qu'un TypeError est levé si le chemin n'est ni str ni list."""
     with pytest.raises(TypeError):  #un entier n'est pas un chemin valide
         ChargeurDonnees(42)
 
 # Tests qui vérifient le nettoyage des données :
 
 def test_nettoyer_colonnes():
+    """Vérifie que nettoyer() conserve uniquement les 5 colonnes utiles."""
     chemin = creer_csv_temporaire()
     c = ChargeurDonnees(chemin)
     c.nettoyer()
@@ -72,6 +77,7 @@ def test_nettoyer_colonnes():
     os.unlink(chemin)
 
 def test_nettoyer_dates():
+    """Vérifie que la colonne Date est convertie en datetime."""
     chemin = creer_csv_temporaire()
     c = ChargeurDonnees(chemin)
     c.nettoyer()
@@ -79,6 +85,7 @@ def test_nettoyer_dates():
     os.unlink(chemin)
 
 def test_nettoyer_buts_entiers():
+    """Vérifie que FTHG et FTAG sont bien de type int après nettoyage."""
     chemin = creer_csv_temporaire()
     c = ChargeurDonnees(chemin)
     c.nettoyer()
@@ -89,19 +96,23 @@ def test_nettoyer_buts_entiers():
 # Tests sur les équipes
 
 def test_get_equipes_nombre():
+    """Vérifie que le nombre d'équipes retourné est correct."""
     c = creer_chargeur()
     assert len(c.get_equipes()) == 3  #notre CSV de test a exactement 3 équipes
 
 def test_get_equipes_tri():
+    """Vérifie que la liste des équipes est triée alphabétiquement."""
     c = creer_chargeur()
     equipes = c.get_equipes()
     assert equipes == sorted(equipes)  #la liste doit être triée alphabétiquement
 
 def test_get_index_equipes_type():
+    """Vérifie que get_index_equipes retourne bien un dictionnaire."""
     c = creer_chargeur()
     assert isinstance(c.get_index_equipes(), dict)  #doit retourner un dictionnaire
 
 def test_get_index_equipes_valeurs():
+    """Vérifie que les valeurs de l'index sont des entiers consécutifs."""
     c = creer_chargeur()
     index = c.get_index_equipes()
     valeurs = sorted(index.values())
@@ -111,11 +122,13 @@ def test_get_index_equipes_valeurs():
 # Tests de la fonction get_matchs
 
 def test_get_matchs_type():
+    """Vérifie que get_matchs retourne un tableau NumPy."""
     c = creer_chargeur()
     assert isinstance(c.get_matchs(), np.ndarray)  #doit retourner un tableau NumPy
 
 
 def test_get_matchs_forme():
+    """Vérifie que le tableau a bien 4 colonnes."""
     c = creer_chargeur()
     matchs = c.get_matchs()
     assert matchs.ndim == 2  #tableau à 2 dimensions
@@ -123,11 +136,13 @@ def test_get_matchs_forme():
 
 
 def test_get_matchs_dtype():
+    """Vérifie que le dtype du tableau est entier."""
     c = creer_chargeur()
     assert np.issubdtype(c.get_matchs().dtype, np.integer)  #toutes les valeurs sont des entiers
 
 
 def test_get_matchs_index_valides():
+    """Vérifie que les index d'équipes sont dans la plage attendue."""
     c = creer_chargeur()
     matchs = c.get_matchs()
     n = len(c.get_equipes())
@@ -138,6 +153,7 @@ def test_get_matchs_index_valides():
 
 
 def test_get_matchs_buts_positifs():
+    """Vérifie que tous les scores de buts sont >= 0."""
     c = creer_chargeur()
     matchs = c.get_matchs()
     assert matchs[:, 2].min() >= 0  #buts domicile peuvent pas être négatifs
@@ -147,6 +163,7 @@ def test_get_matchs_buts_positifs():
 # Test des statistiques
 
 def test_statistiques_equipes():
+    """Vérifie que statistiques_equipes retourne les bonnes colonnes."""
     c = creer_chargeur()
     stats = c.statistiques_equipes()
     assert isinstance(stats, pd.DataFrame)
@@ -159,6 +176,7 @@ def test_statistiques_equipes():
 # Tests de sauvegarder
 
 def test_sauvegarder():
+    """Vérifie que sauvegarder() crée bien un fichier pickle lisible."""
     c = creer_chargeur()
     chemin_pickle = tempfile.mktemp(suffix='.pkl')  #chemin temporaire pour notre fichier pickle
     try:

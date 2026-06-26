@@ -198,7 +198,8 @@ def simuler_saison(nom_saison, n_simulations=500):
 
     # --- ÉTAPE 0 : trouver le meilleur trio de poids ---
     print("Recherche du meilleur trio de pondération...")
-    trio = trouver_meilleur_trio(info["train_valid"], info["validation"])
+    trio = trouver_meilleur_trio(info["train_valid"], info["validation"],
+                                 n_simulations=min(n_simulations, 100), pas=0.1)
     p1 = trio[0]
     p2 = trio[1]
     p3 = trio[2]
