@@ -18,7 +18,7 @@ from visualisation import Visualiseur
 from simulation.forces_promus import forces_pour_position_cible
 from simulation.recherche_ponderation import trouver_meilleur_trio
 from controle_input import demander_saison, demander_entier_positif, demander_sigle
-
+from mesure_temps import chrono_simulation
 
 # ----------------------------------------------------------------------
 # 1. SAISONS DISPONIBLES
@@ -306,13 +306,12 @@ if __name__ == "__main__":
     )
 
     # 3. On demande le nombre de simulations (entier positif contrôlé)
-    nb_simulations = demander_entier_positif(
-        "Combien de simulations voulez-vous effectuer ? (ex: 500) : "
-    )
+    nb_simulations = demander_entier_positif("Combien de simulations voulez-vous effectuer ? (ex: 500) : ")
 
     print(f"\nLancement de la simulation pour {saison_selectionnee} ({nb_simulations} simulations)...")
-    # On lance la simulation : elle renvoie les résultats, le simulateur et l'index
-    resultats, sim, index_saison = simuler_saison(saison_selectionnee, n_simulations=nb_simulations)
+    # on chronomètre : on passe simuler_saison à mesurer
+    resultats, sim, index_saison, duree = chrono_simulation(simuler_saison, saison_selectionnee, nb_simulations)
+    print(f"({duree / nb_simulations * 1000:.2f} ms par simulation Monte-Carlo)")
 
     # ------------------------------------------------------------------
     # GRAPHIQUES (on réutilise la classe Visualiseur)
