@@ -17,6 +17,7 @@ from simulateur import Simulateur
 from visualisation import Visualiseur
 from forces_promus import forces_pour_position_cible
 from recherche_ponderation import trouver_meilleur_trio
+from controle_input import demander_saison, demander_entier_positif, demander_sigle
 
 
 # ----------------------------------------------------------------------
@@ -288,86 +289,52 @@ def simuler_saison(nom_saison, n_simulations=500):
 
 
 # ----------------------------------------------------------------------
-# 4. PROGRAMME PRINCIPAL : DEMANDE À L'UTILISATEUR AVEC POP-UP DE SELECTION
+# 4. PROGRAMME PRINCIPAL
 # ----------------------------------------------------------------------
-
 if __name__ == "__main__":
-    import tkinter as tk
-    from tkinter import simpledialog
-
-    # 1. Création de la fenêtre principale pour les boutons
-    fenetre = tk.Tk()
-    fenetre.title("Choix de la saison")
-    fenetre.geometry("350x400")
-
-    # Variable Tkinter pour stocker le nom de la saison cliquée
-    choix_saison = tk.StringVar()
-
-
-    def choisir(saison):
-        """Fonction déclenchée quand on clique sur un bouton"""
-        choix_saison.set(saison)
-        fenetre.quit()  # Arrête l'attente de la fenêtre
-
-
-    # 2. Ajout du texte en haut de la fenêtre
-    tk.Label(fenetre, text="Sélectionnez la saison à simuler :", font=("Arial", 12, "bold")).pack(pady=20)
-
-    # 3. Création d'un bouton cliquable pour chaque saison
+    # 1. On affiche les saisons disponibles
+    print("Saisons disponibles :")
     for nom in SAISONS:
-        etat = "(future)" if SAISONS[nom]["csv"] is None else "(déjà jouée)"
-
-        # Le 'lambda s=nom' permet d'associer la bonne saison à chaque bouton
-        tk.Button(fenetre, text=f"{nom} {etat}", font=("Arial", 10),
-                  command=lambda s=nom: choisir(s)).pack(pady=5, padx=40, fill="x")
-
-# 4. Affichage de la fenêtre (pause ici en attendant un clic)
-    fenetre.mainloop()
-    saison_selectionnee = choix_saison.get()
-    fenetre.destroy()
-
-    # 5. Si l'utilisateur a cliqué sur une saison
-    if saison_selectionnee:
-        root_cache = tk.Tk()
-        root_cache.withdraw()
-        nb_simulations = simpledialog.askinteger(
-            "Nombre de simulations",
-            f"Saison choisie : {saison_selectionnee}\n\nCombien de simulations voulez-vous effectuer ?",
-            initialvalue=500,
-            minvalue=1
-        )
-        root_cache.destroy()
-
-        if nb_simulations is not None:
-            print(f"\nLancement de la simulation pour {saison_selectionnee} ({nb_simulations} simulations)...")
-            # On lance la simulation : elle renvoie les résultats, le simulateur et l'index
-            resultats, sim, index_saison = simuler_saison(saison_selectionnee, n_simulations=nb_simulations)
-
-            # ------------------------------------------------------------------
-            # GRAPHIQUES (on réutilise la classe Visualiseur)
-            # ------------------------------------------------------------------
-            # L'utilisateur DOIT saisir un sigle officiel (le nom complet est refusé).
-            print("\nÉquipes de cette saison :")
-            for nom in sorted(index_saison.keys()):
-                sigle = SIGLES[nom]
-                print(f"  {sigle:<5} = {nom}")
-
-            sigle_vers_nom = {}
-            for nom in index_saison:
-                sigle_vers_nom[SIGLES[nom]] = nom
-
-            saisie = input("\nQuelle équipe détailler ? (sigle officiel, ex: ARS) : ").strip().upper()
-            while saisie not in sigle_vers_nom:
-                print("Sigle invalide. Entrez un sigle de la liste ci-dessus (ex: ARS).")
-                saisie = input("Sigle : ").strip().upper()
-            equipe = sigle_vers_nom[saisie]
-
-            visu = Visualiseur(resultats)
-            visu.graphique_probabilites_titre()
-            visu.graphique_classement_moyen()
-            visu.graphique_distribution_points(equipe, simulateur=sim)
-            plt.show()
+        if SAISONS[nom]["csv"] is None:
+            print(f"  - {nom} (future)")
         else:
-            print("\nSimulation annulée au moment du choix des simulations.")
-    else:
-        print("\nSimulation annulée : aucune saison sélectionnée.")
+            print(f"  - {nom} (déjà jouée)")
+
+    # 2. On demande une saison valide (fonction du module validation_saisie)
+    saison_selectionnee = demander_saison(
+        "\nQuelle saison voulez-vous simuler ? (ex: 2023-2024) : ", SAISONS
+    )
+
+    # 3. On demande le nombre de simulations (entier positif contrôlé)
+    nb_simulations = demander_entier_positif(
+        "Combien de simulations voulez-vous effectuer ? (ex: 500) : "
+    )
+
+    print(f"\nLancement de la simulation pour {saison_selectionnee} ({nb_simulations} simulations)...")
+    # On lance la simulation : elle renvoie les résultats, le simulateur et l'index
+    resultats, sim, index_saison = simuler_saison(saison_selectionnee, n_simulations=nb_simulations)
+
+    # ------------------------------------------------------------------
+    # GRAPHIQUES (on réutilise la classe Visualiseur)
+    # ------------------------------------------------------------------
+    # On affiche la liste des équipes avec leur sigle officiel
+    print("\nÉquipes de cette saison :")
+    for nom in sorted(index_saison.keys()):
+        sigle = SIGLES[nom]
+        print(f"  {sigle:<5} = {nom}")
+
+    # dictionnaire {sigle: nom} pour retrouver le nom complet depuis le sigle
+    sigle_vers_nom = {}
+    for nom in index_saison:
+        sigle_vers_nom[SIGLES[nom]] = nom
+
+    # 4. On demande un sigle officiel valide (fonction du module validation_saisie)
+    equipe = demander_sigle(
+        "\nQuelle équipe détailler ? (sigle officiel, ex: ARS) : ", sigle_vers_nom
+    )
+
+    visu = Visualiseur(resultats)
+    visu.graphique_probabilites_titre()
+    visu.graphique_classement_moyen()
+    visu.graphique_distribution_points(equipe, simulateur=sim)
+    plt.show()
