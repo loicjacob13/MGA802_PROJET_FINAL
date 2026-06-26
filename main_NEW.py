@@ -1,5 +1,5 @@
 """
-simuler_saison_choisie.py — Choisir une saison et la simuler automatiquement.
+main_NEW.py — Choisir une saison et la simuler automatiquement.
 Auteurs : Fabien - Loïc - Guillaume — Projet MGA802 Groupe 2
 
 PRINCIPE :
