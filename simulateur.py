@@ -47,7 +47,7 @@ class Simulateur:
         return buts_dom, buts_ext
 
     # ------------------------------------------------------------------
-    # ÉTAPE 2 — Simuler une saison complète (380 matchs)
+    # ÉTAPE 2 — Simuler une saison complète (380 matchs)-
     # ------------------------------------------------------------------
 
     '''def simuler_saison(self) -> pd.DataFrame:
